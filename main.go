@@ -43,11 +43,14 @@ func main() {
 	app.Flags = []cli.Flag{}
 	app.Description = "Shogun: Become one with your katana functions"
 	app.CustomAppHelpTemplate = helpTemplate
-	app.Action = func(c *cli.Context) error {
-		return nil
-	}
+	app.Action = mainAction
 
 	app.Commands = []cli.Command{
+		{
+			Name:   "build",
+			Action: build,
+			Flags:  []cli.Flag{},
+		},
 		{
 			Name:   "version",
 			Action: versionAction,
@@ -56,6 +59,16 @@ func main() {
 	}
 
 	app.RunAndExitOnError()
+}
+
+func mainAction(c *cli.Context) error {
+
+	return nil
+}
+
+func build(c *cli.Context) error {
+
+	return nil
 }
 
 func versionAction(c *cli.Context) {
