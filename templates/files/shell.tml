@@ -1,0 +1,117 @@
+package main
+
+import (
+	"fmt"
+	"strings"
+	"runtime"
+
+	"github.com/fatih/color"
+	"github.com/minio/cli"
+)
+
+
+var (
+ binHash = {{quote .Hash}}
+ email = {{ quote .Email }}
+ version = {{ quote .Version }}
+ binName = {{quote .BinName }}
+ helpTemplate = `{{.HelpFormat }}`
+)
+
+func main(){
+	app := cli.NewApp()
+	app.Name = "moz"
+	app.Author = ""
+	app.Usage = "moz {{command}}"
+  app.Version = version
+  app.email = email
+	app.Flags = []cli.Flag{}
+	app.Description = "moz: CLI tooling for the go language generator."
+	app.CustomAppHelpTemplate = helpTemplate
+  app.Action = mainAction
+
+	app.Commands = []cli.Command{
+		{
+			Name:   "version",
+			Action: versionAction,
+			Flags:  []cli.Flag{},
+		},
+		{
+			Name:   "hash",
+			Action: hashAction,
+			Flags:  []cli.Flag{},
+		},
+		{
+			Name:   "list",
+			Action: listAction,
+			Flags:  []cli.Flag{},
+		},
+		{
+			Name:   "help",
+			Action: helpAction,
+			Flags:  []cli.Flag{
+				cli.BoolFlag{
+					Name:  "f,full",
+					Usage: "-f=true",
+				},
+				cli.BoolFlag{
+					Name:  "s,source",
+					Usage: "-s=true",
+				},
+      },
+		},
+  }
+}
+
+func versionAction(c *cli.Context) {
+	fmt.Println(color.BlueString(fmt.Sprintf("%s version %s %s/%s; of the Shogun.", binName, version, runtime.GOOS, runtime.GOARCH)))
+}
+
+func hashAction(c *cli.Context) {
+	fmt.Println(binHash)
+}
+
+func listAction(c *cli.Context) {
+  fmt.Println("Samurai below are your katana functions")
+
+  {{ range := .Functions }}
+  fmt.Printf("- %s\n", {{quote .Name}})
+  {{end}}
+}
+
+func helpAction(c *cli.Context) {
+  fmt.Printf("Samurai must always seek help in the Shogunate\n\n")
+
+  funcName := c.Args().First()
+  withSource := c.Bool("source")
+  fullComment := c.Bool("full")
+
+  switch funcName {
+    {{ range := .Functions }}
+    case {{quote .Name}}:
+      fmt.Printf("Name: {{.Name}}\n\n")
+
+      if fullComment {
+        fmt.Printf("Description:\n {{.Comments }}\n\n")
+      }else{
+        fmt.Printf("Description:\n {{.Synopses }}\n\n")
+      }
+
+      if withSource {
+        fmt.Printf("Source:\n {{.Source }}\n\n")
+
+        fmt.Printf("Dependent:\n\n")
+        {{ range .Depends }}
+          fmt.Printf("- {{.}}\n")
+        {{end}}
+      }
+    {{end}}
+    default:
+      fmt.Printf("No samurai katana function with name %+q", funcName)
+  }
+}
+
+{{ range := .Functions }}
+{{ .Doc }}
+{{ .Source }}
+{{ end }}
