@@ -61,6 +61,16 @@ func main() {
 
 	app.Commands = []cli.Command{
 		{
+			Name:   "init",
+			Action: initAction,
+			Flags:  []cli.Flag{
+				cli.BoolFlag{
+					Name: "nosh,noshogunate",
+					Usage: "-nosh=true",
+				},
+			},
+		},
+		{
 			Name:   "build",
 			Action: buildit,
 			Flags:  []cli.Flag{},
@@ -73,6 +83,12 @@ func main() {
 	}
 
 	app.RunAndExitOnError()
+}
+
+func initAction(c *cli.Context) error {
+	noShogunate := c.Bool("noshogunate")
+
+	if noShogunate
 }
 
 func mainAction(c *cli.Context) error {
