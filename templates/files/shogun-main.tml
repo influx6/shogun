@@ -2,3 +2,11 @@
 // the commandline and executable in a variaty of ways.
 // @binaryName(name => {{lower .Package }})
 package {{lower .Package}}
+
+
+// Build provides a default function, but you are free to call it whatever name. It has a `default` annotation
+// that sets it as the entry function to be called.
+// @default
+func Build() error {
+  return nil
+}

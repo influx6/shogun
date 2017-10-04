@@ -19,6 +19,7 @@ import (
 	"github.com/influx6/faux/metrics/custom"
 	"github.com/influx6/gobuild/build"
 	"github.com/influx6/moz/ast"
+	"github.com/influx6/moz/gen"
 	"github.com/minio/cli"
 )
 
@@ -63,9 +64,9 @@ func main() {
 		{
 			Name:   "init",
 			Action: initAction,
-			Flags:  []cli.Flag{
+			Flags: []cli.Flag{
 				cli.BoolFlag{
-					Name: "nosh,noshogunate",
+					Name:  "nosh,noshogunate",
 					Usage: "-nosh=true",
 				},
 			},
@@ -86,9 +87,19 @@ func main() {
 }
 
 func initAction(c *cli.Context) error {
-	noShogunate := c.Bool("noshogunate")
+	var storeDir = "./"
+	if c.Bool("noshogunate") {
+		storeDir = shogunateDirName
+	}
 
-	if noShogunate
+	directives = []gen.WriteDirective{
+		{
+			Dir:      storeDir,
+			FileName: "shogun.go",
+		},
+	}
+
+	err := ast.WriteDirectives(events, "./", false, directives...)
 }
 
 func mainAction(c *cli.Context) error {
