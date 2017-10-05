@@ -1,4 +1,0 @@
-// Package {{ lower .Package }} is a package to provided make style executable functions which are available through
-// the commandline and executable in a variaty of ways.
-// @binaryName(name => {{lower .Package }})
-package {{lower .Package}}

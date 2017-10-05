@@ -1,6 +1,6 @@
 package main
 
-//go:generate go generate ./...
+//go:generate go generate ./templates/...
 
 import (
 	"bytes"
@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path/filepath"
+	"regexp"
 	"runtime"
 	"strings"
 	"text/template"
@@ -19,6 +20,7 @@ import (
 	"github.com/influx6/faux/metrics"
 	"github.com/influx6/faux/metrics/custom"
 	"github.com/influx6/gobuild/build"
+	"github.com/influx6/gobuild/srcpath"
 	"github.com/influx6/moz/ast"
 	"github.com/influx6/moz/gen"
 	"github.com/influx6/shogun/templates"
@@ -27,8 +29,10 @@ import (
 
 // Version defines the version number for the cli.
 var Version = "0.1"
-var shogunateDirName = "shogunate"
+var nolog = metrics.New()
+var shogunateDirName = "katanas"
 var events = metrics.New(custom.StackDisplay(os.Stdout))
+var packageReg = regexp.MustCompile(`package \w+`)
 
 var helpTemplate = `NAME:
 {{.Name}} - {{.Usage}}
@@ -67,15 +71,19 @@ func main() {
 			Name:   "init",
 			Action: initAction,
 			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "n,name",
+					Usage: "-name=bob-build",
+				},
 				cli.BoolFlag{
-					Name:  "nosh,noshogunate",
-					Usage: "-nosh=true",
+					Name:  "nopkg",
+					Usage: "-nopkg=true",
 				},
 			},
 		},
 		{
 			Name:   "build",
-			Action: buildit,
+			Action: buildAction,
 			Flags:  []cli.Flag{},
 		},
 		{
@@ -89,40 +97,81 @@ func main() {
 }
 
 func initAction(c *cli.Context) error {
+	currentDir, err := os.Getwd()
+	if err != nil {
+		events.Emit(metrics.Error(err).With("dir", currentDir))
+		return err
+	}
+
+	sourceDir, err := srcpath.RelativeToSrc(currentDir)
+	if err != nil {
+		events.Emit(metrics.Errorf("Must be run within go src path: %+q", err).With("dir", currentDir))
+		return err
+	}
+
 	ctx := build.Default
 	pkg, err := ctx.ImportDir("./", build.FindOnly)
 	if err != nil {
 		return err
 	}
 
-	var storeDir = ""
-	var packageName = pkg.Name
+	packageTemplate := "shogun-in-pkg.tml"
 
-	if c.Bool("noshogunate") {
-		storeDir = shogunateDirName
-		packageName = "shogunate"
+	storeDir := shogunateDirName
+	packageName := shogunateDirName
+	if c.Bool("nopkg") {
+		storeDir = ""
+		packageName = "main"
+	}
+
+	pkgName := pkg.Name
+	if pkgName == "" {
+		pkgName = filepath.Base(sourceDir)
+	}
+
+	binaryName := c.String("name")
+	if binaryName == "" {
+		binaryName = fmt.Sprintf("%s_shogun", pkgName)
 	}
 
 	directives := []gen.WriteDirective{
 		{
 			Dir:      storeDir,
-			FileName: "shogun.go",
+			FileName: "katana.go",
 			Writer: gen.SourceTextWith(
-				string(templates.Must("shogunate-main.tml")),
+				string(templates.Must(packageTemplate)),
 				template.FuncMap{},
 				struct {
-					Package string
+					Package    string
+					BinaryName string
 				}{
-					Package: packageName,
+					Package:    packageName,
+					BinaryName: binaryName,
 				},
 			),
 		},
 	}
 
-	return ast.SimpleWriteDirectives("./", false, directives...)
+	if err := ast.SimpleWriteDirectives("./", false, directives...); err != nil {
+		return err
+	}
+
+	gitignore, err := os.OpenFile(filepath.Join(currentDir, ".gitignore"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+
+	defer gitignore.Close()
+	gitignore.Write([]byte(".shogun\n"))
+
+	return nil
 }
 
 func mainAction(c *cli.Context) error {
+	if c.NArg() == 0 {
+		return nil
+	}
+
 	var response, responseErr bytes.Buffer
 	lsCmd := exec.New(exec.Command(""), exec.Async(), exec.Output(&response), exec.Err(&responseErr))
 
@@ -130,7 +179,7 @@ func mainAction(c *cli.Context) error {
 	return nil
 }
 
-func buildit(c *cli.Context) error {
+func buildAction(c *cli.Context) error {
 	var targetDir string
 
 	binaryPath := binPath()
@@ -141,21 +190,22 @@ func buildit(c *cli.Context) error {
 	}
 
 	targetDir = currentDir
-
-	if stat, err := os.Stat(filepath.Join(currentDir, shogunateDirName)); err == nil && stat.IsDir() {
-		targetDir = filepath.Join(currentDir, shogunateDirName)
+	if shogunate := filepath.Join(currentDir, shogunateDirName); hasDir(shogunate) {
+		targetDir = shogunate
 	}
 
 	ctx := build.Default
 	ctx.BuildTags = append(ctx.BuildTags, "shogun")
 	ctx.RequiredTags = append(ctx.RequiredTags, "shogun")
-	pkg, err := ast.FilteredPackageWithBuildCtx(events, targetDir, ctx)
+	pkgs, err := ast.FilteredPackageWithBuildCtx(nolog, targetDir, ctx)
 	if err != nil {
 		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
 		return err
 	}
 
-	for _, pkgItem := range pkg.Packages {
+	var directives []gen.WriteDirective
+
+	for _, pkgItem := range pkgs {
 		pkgHash, err := generateHash(pkgItem.Files)
 		if err != nil {
 			events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
@@ -163,7 +213,6 @@ func buildit(c *cli.Context) error {
 		}
 
 		var binaryName string
-
 		if binAnnons := pkgItem.AnnotationsFor("@binaryName"); len(binAnnons) != 0 {
 			if len(binAnnons[0].Arguments) == 0 {
 				err := fmt.Errorf("binaryName annotation requires a single argument has the name of binary file")
@@ -171,24 +220,67 @@ func buildit(c *cli.Context) error {
 				continue
 			}
 
-			binaryName = binAnnons[0].Arguments[0]
+			binaryName = strings.ToLower(binAnnons[0].Param("name"))
 		} else {
-			binaryName = strings.ToLower(filepath.Base(pkgItem.Package))
+			binaryName = pkgItem.Name
 		}
 
 		// if the current hash we received is exactly like current calculated hash then continue to another package.
 		if currentBinHash, err := binHash(filepath.Join(binaryPath, binaryName)); err == nil && currentBinHash == pkgHash {
 			continue
 		}
+
+		for _, declr := range pkgItem.Packages {
+			source := strings.Replace(declr.Source, strings.Join(declr.Comments, "\n"), "", -1)
+			packageIndex := strings.Index(source, "package")
+			packagePart := packageReg.FindString(source)
+
+			source = source[packageIndex:]
+			source = strings.TrimSpace(strings.Replace(source, packagePart, "", 1))
+
+			directives = append(directives, gen.WriteDirective{
+				FileName: filepath.Base(declr.FilePath),
+				Dir:      filepath.Join(".shogun", binaryName),
+				Writer: gen.SourceTextWith(
+					string(templates.Must("shogun-src.tml")),
+					template.FuncMap{},
+					struct {
+						Source string
+					}{
+						Source: source,
+					},
+				),
+			})
+		}
+	}
+
+	if err := ast.SimpleWriteDirectives("./", true, directives...); err != nil {
+		return err
 	}
 
 	return nil
 }
 
+func hasDir(dir string) bool {
+	if stat, err := os.Stat(dir); err == nil && stat.IsDir() {
+		return true
+	}
+
+	return false
+}
+
+func hasFile(file string) bool {
+	if _, err := os.Stat(file); err == nil {
+		return true
+	}
+
+	return false
+}
+
 func binHash(binPath string) (string, error) {
 	var response bytes.Buffer
 
-	if err := exec.New(exec.Command("%s hash", binPath), exec.Async(), exec.Output(&response)).Exec(context.Background(), events); err != nil {
+	if err := exec.New(exec.Command("%s hash", binPath), exec.Async(), exec.Output(&response)).Exec(context.Background(), nolog); err != nil {
 		return "", err
 	}
 

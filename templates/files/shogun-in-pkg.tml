@@ -1,0 +1,14 @@
+// +build shogun
+
+// Package {{ lower .Package }} provides exported functions as tasks runnable from commandline.
+//
+// @binaryName(name => {{lower .BinaryName }})
+//
+package {{lower .Package}}
+
+
+// Slash is the default tasks due to below annotation.
+// @default
+func Slash() error {
+  return nil
+}
