@@ -12,6 +12,7 @@ import (
 	"path/filepath"
 	"runtime"
 	"strings"
+	"text/template"
 
 	"github.com/fatih/color"
 	"github.com/influx6/faux/exec"
@@ -20,6 +21,7 @@ import (
 	"github.com/influx6/gobuild/build"
 	"github.com/influx6/moz/ast"
 	"github.com/influx6/moz/gen"
+	"github.com/influx6/shogun/templates"
 	"github.com/minio/cli"
 )
 
@@ -87,19 +89,37 @@ func main() {
 }
 
 func initAction(c *cli.Context) error {
-	var storeDir = "./"
-	if c.Bool("noshogunate") {
-		storeDir = shogunateDirName
+	ctx := build.Default
+	pkg, err := ctx.ImportDir("./", build.FindOnly)
+	if err != nil {
+		return err
 	}
 
-	directives = []gen.WriteDirective{
+	var storeDir = ""
+	var packageName = pkg.Name
+
+	if c.Bool("noshogunate") {
+		storeDir = shogunateDirName
+		packageName = "shogunate"
+	}
+
+	directives := []gen.WriteDirective{
 		{
 			Dir:      storeDir,
 			FileName: "shogun.go",
+			Writer: gen.SourceTextWith(
+				string(templates.Must("shogunate-main.tml")),
+				template.FuncMap{},
+				struct {
+					Package string
+				}{
+					Package: packageName,
+				},
+			),
 		},
 	}
 
-	err := ast.WriteDirectives(events, "./", false, directives...)
+	return ast.SimpleWriteDirectives("./", false, directives...)
 }
 
 func mainAction(c *cli.Context) error {
