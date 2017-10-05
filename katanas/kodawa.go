@@ -1,0 +1,3 @@
+// +build shogun
+
+package katanas

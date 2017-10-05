@@ -6,6 +6,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha1"
+	"errors"
 	"fmt"
 	"io"
 	"os"
@@ -31,6 +32,7 @@ import (
 var Version = "0.1"
 var nolog = metrics.New()
 var shogunateDirName = "katanas"
+var goosRuntime = runtime.GOOS
 var events = metrics.New(custom.StackDisplay(os.Stdout))
 var packageReg = regexp.MustCompile(`package \w+`)
 
@@ -82,6 +84,11 @@ func main() {
 			},
 		},
 		{
+			Name:   "add",
+			Action: addAction,
+			Flags:  []cli.Flag{},
+		},
+		{
 			Name:   "build",
 			Action: buildAction,
 			Flags:  []cli.Flag{},
@@ -94,6 +101,43 @@ func main() {
 	}
 
 	app.RunAndExitOnError()
+}
+
+func addAction(c *cli.Context) error {
+	if c.NArg() == 0 {
+		return errors.New("You are required to supply name of file without extension .eg kodachi-task")
+	}
+
+	packageName := shogunateDirName
+	packageDir := shogunateDirName
+	fileName := fmt.Sprintf("%s.go", c.Args().First())
+
+	if !hasDir(shogunateDirName) {
+		packageName = "main"
+		packageDir = ""
+	}
+
+	directives := []gen.WriteDirective{
+		{
+			Dir:      packageDir,
+			FileName: fileName,
+			Writer: gen.SourceTextWith(
+				string(templates.Must("shogun-add.tml")),
+				template.FuncMap{},
+				struct {
+					Package string
+				}{
+					Package: packageName,
+				},
+			),
+		},
+	}
+
+	if err := ast.SimpleWriteDirectives("./", false, directives...); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 func initAction(c *cli.Context) error {
@@ -212,7 +256,7 @@ func buildAction(c *cli.Context) error {
 			return err
 		}
 
-		var binaryName string
+		var binaryName, binaryExeName string
 		if binAnnons := pkgItem.AnnotationsFor("@binaryName"); len(binAnnons) != 0 {
 			if len(binAnnons[0].Arguments) == 0 {
 				err := fmt.Errorf("binaryName annotation requires a single argument has the name of binary file")
@@ -225,10 +269,17 @@ func buildAction(c *cli.Context) error {
 			binaryName = pkgItem.Name
 		}
 
+		binaryExeName = binaryName
+		if goosRuntime == "windows" {
+			binaryExeName = fmt.Sprintf("%s.exec", binaryName)
+		}
+
 		// if the current hash we received is exactly like current calculated hash then continue to another package.
 		if currentBinHash, err := binHash(filepath.Join(binaryPath, binaryName)); err == nil && currentBinHash == pkgHash {
 			continue
 		}
+
+		packageBinaryPath := filepath.Join(".shogun", binaryName)
 
 		for _, declr := range pkgItem.Packages {
 			source := strings.Replace(declr.Source, strings.Join(declr.Comments, "\n"), "", -1)
@@ -240,7 +291,7 @@ func buildAction(c *cli.Context) error {
 
 			directives = append(directives, gen.WriteDirective{
 				FileName: filepath.Base(declr.FilePath),
-				Dir:      filepath.Join(".shogun", binaryName),
+				Dir:      packageBinaryPath,
 				Writer: gen.SourceTextWith(
 					string(templates.Must("shogun-src.tml")),
 					template.FuncMap{},
@@ -252,6 +303,36 @@ func buildAction(c *cli.Context) error {
 				),
 			})
 		}
+
+		directives = append(directives, gen.WriteDirective{
+			FileName: "main.go",
+			Dir:      packageBinaryPath,
+			Writer: gen.SourceTextWith(
+				string(templates.Must("main.tml")),
+				template.FuncMap{},
+				struct {
+				}{},
+			),
+			After: func() error {
+				fmt.Printf("Building binary for shogun %q\n", binaryName)
+
+				if err := exec.New(exec.Command("go build -x -o %s %s", filepath.Join(binaryPath, binaryExeName), filepath.Join(currentDir, packageBinaryPath, "main.go")), exec.Async()).Exec(context.Background(), nolog); err != nil {
+					fmt.Printf("Building binary for shogun %q failed\n", binaryName)
+					return err
+				}
+
+				fmt.Printf("Built binary for shogun %q into %q\n", binaryName, binaryPath)
+
+				fmt.Printf("Cleaning up shogun binary build files... %q\n", binaryName)
+				if err := os.Remove(filepath.Join(currentDir, packageBinaryPath)); err != nil {
+					fmt.Printf("Failed to proper clean up shogun binary build files %q\n", binaryName)
+					return err
+				}
+
+				fmt.Printf("Shogun %q build ready\n\n", binaryName)
+				return nil
+			},
+		})
 	}
 
 	if err := ast.SimpleWriteDirectives("./", true, directives...); err != nil {
