@@ -91,7 +91,12 @@ func main() {
 		{
 			Name:   "build",
 			Action: buildAction,
-			Flags:  []cli.Flag{},
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "skip,skipbuild",
+					Usage: "-skip=true",
+				},
+			},
 		},
 		{
 			Name:   "version",
@@ -224,6 +229,7 @@ func mainAction(c *cli.Context) error {
 }
 
 func buildAction(c *cli.Context) error {
+	skipBuild := c.Bool("skipbuild")
 	var targetDir string
 
 	binaryPath := binPath()
@@ -314,7 +320,12 @@ func buildAction(c *cli.Context) error {
 				}{},
 			),
 			After: func() error {
-				fmt.Printf("Building binary for shogun %q\n", binaryName)
+				if skipBuild {
+					return nil
+				}
+
+				fmt.Printf("----------------------------------------\n")
+				fmt.Printf("Building binary for shogunate: %q\n", binaryName)
 
 				if err := exec.New(exec.Command("go build -x -o %s %s", filepath.Join(binaryPath, binaryExeName), filepath.Join(currentDir, packageBinaryPath, "main.go")), exec.Async()).Exec(context.Background(), nolog); err != nil {
 					fmt.Printf("Building binary for shogun %q failed\n", binaryName)
@@ -324,8 +335,8 @@ func buildAction(c *cli.Context) error {
 				fmt.Printf("Built binary for shogun %q into %q\n", binaryName, binaryPath)
 
 				fmt.Printf("Cleaning up shogun binary build files... %q\n", binaryName)
-				if err := os.Remove(filepath.Join(currentDir, packageBinaryPath)); err != nil {
-					fmt.Printf("Failed to proper clean up shogun binary build files %q\n", binaryName)
+				if err := os.RemoveAll(filepath.Join(currentDir, packageBinaryPath)); err != nil {
+					fmt.Printf("Failed to properly cleanup build files %q\n", binaryName)
 					return err
 				}
 
