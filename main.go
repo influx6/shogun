@@ -20,6 +20,7 @@ import (
 	"github.com/influx6/faux/exec"
 	"github.com/influx6/faux/metrics"
 	"github.com/influx6/faux/metrics/custom"
+	"github.com/influx6/faux/vfiles"
 	"github.com/influx6/gobuild/build"
 	"github.com/influx6/gobuild/srcpath"
 	"github.com/influx6/moz/ast"
@@ -86,7 +87,12 @@ func main() {
 		{
 			Name:   "add",
 			Action: addAction,
-			Flags:  []cli.Flag{},
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "dn,dirName",
+					Usage: "-dirName=bob-build",
+				},
+			},
 		},
 		{
 			Name:   "build",
@@ -114,16 +120,29 @@ func addAction(c *cli.Context) error {
 	}
 
 	packageName := shogunateDirName
-	packageDir := shogunateDirName
-	fileName := fmt.Sprintf("%s.go", c.Args().First())
+	toDirName := c.String("dirName")
 
-	if !hasDir(shogunateDirName) {
+	if toDirName != "" {
+		packageName = toDirName
+	}
+
+	packageDir := filepath.Join(shogunateDirName, toDirName)
+
+	if !hasDir(shogunateDirName) && toDirName == "" {
 		packageName = "main"
 		packageDir = ""
 	}
 
-	directives := []gen.WriteDirective{
-		{
+	var directives []gen.WriteDirective
+
+	for i := 0; i < c.NArg(); i++ {
+		arg := c.Args().Get(i)
+		if arg == "" {
+			continue
+		}
+
+		fileName := fmt.Sprintf("%s.go", arg)
+		directives = append(directives, gen.WriteDirective{
 			Dir:      packageDir,
 			FileName: fileName,
 			Writer: gen.SourceTextWith(
@@ -135,7 +154,8 @@ func addAction(c *cli.Context) error {
 					Package: packageName,
 				},
 			),
-		},
+		})
+
 	}
 
 	if err := ast.SimpleWriteDirectives("./", false, directives...); err != nil {
@@ -230,7 +250,9 @@ func mainAction(c *cli.Context) error {
 
 func buildAction(c *cli.Context) error {
 	skipBuild := c.Bool("skipbuild")
+
 	var targetDir string
+	var hasShogunateDir bool
 
 	binaryPath := binPath()
 	currentDir, err := os.Getwd()
@@ -240,17 +262,63 @@ func buildAction(c *cli.Context) error {
 	}
 
 	targetDir = currentDir
+
 	if shogunate := filepath.Join(currentDir, shogunateDirName); hasDir(shogunate) {
+		hasShogunateDir = true
 		targetDir = shogunate
 	}
 
 	ctx := build.Default
 	ctx.BuildTags = append(ctx.BuildTags, "shogun")
 	ctx.RequiredTags = append(ctx.RequiredTags, "shogun")
-	pkgs, err := ast.FilteredPackageWithBuildCtx(nolog, targetDir, ctx)
+
+	// Build shogunate directory itself first.
+	directives, err := buildDir(targetDir, currentDir, binaryPath, skipBuild, ctx)
+	if err != nil {
+		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath).With("doSubDir", hasShogunateDir))
+		return err
+	}
+
+	if hasShogunateDir {
+		vdir := filepath.Join(currentDir, shogunateDirName)
+		if err := vfiles.WalkDirSurface(vdir, func(rel string, abs string, info os.FileInfo) error {
+			if !info.IsDir() {
+				return nil
+			}
+
+			subdirqs, err := buildDir(filepath.Join(targetDir, rel), currentDir, binaryPath, skipBuild, ctx)
+			if err != nil {
+				events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath).With("doSubDir", hasShogunateDir))
+				return err
+			}
+
+			directives = append(directives, subdirqs...)
+			return nil
+		}); err != nil {
+			events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath).With("doSubDir", hasShogunateDir).With("directory-visited", vdir))
+			return err
+		}
+	}
+
+	directives = append(directives, gen.WriteDirective{
+		Before: func() error {
+			return os.RemoveAll(filepath.Join(currentDir, ".shogun"))
+		},
+	})
+
+	if err := ast.SimpleWriteDirectives("./", true, directives...); err != nil {
+		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath).With("doSubDir", hasShogunateDir))
+		return err
+	}
+
+	return nil
+}
+
+func buildDir(dir string, currentDir string, binaryPath string, skipBuild bool, ctx build.Context) ([]gen.WriteDirective, error) {
+	pkgs, err := ast.FilteredPackageWithBuildCtx(nolog, dir, ctx)
 	if err != nil {
 		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
-		return err
+		return nil, err
 	}
 
 	var directives []gen.WriteDirective
@@ -259,7 +327,7 @@ func buildAction(c *cli.Context) error {
 		pkgHash, err := generateHash(pkgItem.Files)
 		if err != nil {
 			events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
-			return err
+			return nil, err
 		}
 
 		var binaryName, binaryExeName string
@@ -346,11 +414,7 @@ func buildAction(c *cli.Context) error {
 		})
 	}
 
-	if err := ast.SimpleWriteDirectives("./", true, directives...); err != nil {
-		return err
-	}
-
-	return nil
+	return directives, nil
 }
 
 func hasDir(dir string) bool {
