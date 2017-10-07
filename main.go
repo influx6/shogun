@@ -8,7 +8,9 @@ import (
 	"crypto/sha1"
 	"errors"
 	"fmt"
+	"go/doc"
 	"io"
+	"io/ioutil"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -25,19 +27,22 @@ import (
 	"github.com/influx6/gobuild/srcpath"
 	"github.com/influx6/moz/ast"
 	"github.com/influx6/moz/gen"
+	"github.com/influx6/shogun/internal"
 	"github.com/influx6/shogun/templates"
 	"github.com/minio/cli"
 )
 
-// Version defines the version number for the cli.
-var Version = "0.1"
-var nolog = metrics.New()
-var shogunateDirName = "katanas"
-var goosRuntime = runtime.GOOS
-var events = metrics.New(custom.StackDisplay(os.Stdout))
-var packageReg = regexp.MustCompile(`package \w+`)
+// vars
+var (
+	Version          = "0.1"
+	nolog            = metrics.New()
+	shogunateDirName = "katanas"
+	ignoreAddition   = ".shogun"
+	goosRuntime      = runtime.GOOS
+	events           = metrics.New(custom.StackDisplay(os.Stdout))
+	packageReg       = regexp.MustCompile(`package \w+`)
 
-var helpTemplate = `NAME:
+	helpTemplate = `NAME:
 {{.Name}} - {{.Usage}}
 
 VERSION:
@@ -57,6 +62,7 @@ FLAGS:
 	{{end}}{{end}}
 
 `
+)
 
 func main() {
 	app := cli.NewApp()
@@ -85,6 +91,11 @@ func main() {
 			},
 		},
 		{
+			Name:   "list",
+			Action: listAction,
+			Flags:  []cli.Flag{},
+		},
+		{
 			Name:   "add",
 			Action: addAction,
 			Flags: []cli.Flag{
@@ -98,6 +109,10 @@ func main() {
 			Name:   "build",
 			Action: buildAction,
 			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "up,usePkg",
+					Usage: "-usePkg=true",
+				},
 				cli.BoolFlag{
 					Name:  "skip,skipbuild",
 					Usage: "-skip=true",
@@ -222,16 +237,30 @@ func initAction(c *cli.Context) error {
 	}
 
 	if err := ast.SimpleWriteDirectives("./", false, directives...); err != nil {
+		events.Emit(metrics.Errorf("Failed to write changes to disk: %+q", err).With("dir", currentDir))
 		return err
 	}
 
-	gitignore, err := os.OpenFile(filepath.Join(currentDir, ".gitignore"), os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	ignoreFile := filepath.Join(currentDir, ".gitignore")
+	if _, err := os.Stat(ignoreFile); err != nil {
+		if igerr := addtoGitIgnore(ignoreFile); igerr != nil {
+			events.Emit(metrics.Errorf("Failed to add changes to .gitignore: %+q", igerr).With("dir", currentDir))
+			return igerr
+		}
+	}
+
+	ignoreFileData, err := ioutil.ReadFile(ignoreFile)
 	if err != nil {
+		events.Emit(metrics.Errorf("Failed to read data from .gitignore: %+q", err).With("dir", currentDir).With("git_ignore", ignoreFile))
 		return err
 	}
 
-	defer gitignore.Close()
-	gitignore.Write([]byte(".shogun\n"))
+	if !bytes.Contains(ignoreFileData, []byte(ignoreAddition)) {
+		if igerr := addtoGitIgnore(ignoreFile); igerr != nil {
+			events.Emit(metrics.Errorf("Failed to add changes to .gitignore: %+q", igerr).With("dir", currentDir))
+			return igerr
+		}
+	}
 
 	return nil
 }
@@ -245,6 +274,57 @@ func mainAction(c *cli.Context) error {
 	lsCmd := exec.New(exec.Command(""), exec.Async(), exec.Output(&response), exec.Err(&responseErr))
 
 	_ = lsCmd
+	return nil
+}
+
+func listAction(c *cli.Context) error {
+	var targetDir string
+	var hasShogunateDir bool
+
+	currentDir, err := os.Getwd()
+	if err != nil {
+		events.Emit(metrics.Errorf("Failed to read current directory: %q", err))
+		return err
+	}
+
+	targetDir = currentDir
+	if shogunate := filepath.Join(currentDir, shogunateDirName); hasDir(shogunate) {
+		hasShogunateDir = true
+		targetDir = shogunate
+	}
+
+	ctx := build.Default
+	ctx.BuildTags = append(ctx.BuildTags, "shogun")
+	ctx.RequiredTags = append(ctx.RequiredTags, "shogun")
+
+	// Build shogunate directory itself first.
+	functions, err := buildFunctionList(targetDir, currentDir, ctx)
+	if err != nil {
+		events.Emit(metrics.Errorf("Failed to generate function list : %+q", err))
+		return err
+	}
+
+	if hasShogunateDir {
+		vdir := filepath.Join(currentDir, shogunateDirName)
+		if err := vfiles.WalkDirSurface(vdir, func(rel string, abs string, info os.FileInfo) error {
+			if !info.IsDir() {
+				return nil
+			}
+
+			res, err := buildFunctionList(filepath.Join(vdir, rel), currentDir, ctx)
+			if err != nil {
+				return err
+			}
+
+			functions = append(functions, res...)
+			return nil
+		}); err != nil {
+			events.Emit(metrics.Error(err).With("dir", currentDir).With("directory-visited", vdir))
+			return err
+		}
+	}
+
+	_ = functions
 	return nil
 }
 
@@ -299,12 +379,6 @@ func buildAction(c *cli.Context) error {
 			return err
 		}
 	}
-
-	directives = append(directives, gen.WriteDirective{
-		Before: func() error {
-			return os.RemoveAll(filepath.Join(currentDir, ".shogun"))
-		},
-	})
 
 	if err := ast.SimpleWriteDirectives("./", true, directives...); err != nil {
 		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath).With("doSubDir", hasShogunateDir))
@@ -382,7 +456,7 @@ func buildDir(dir string, currentDir string, binaryPath string, skipBuild bool, 
 			FileName: "main.go",
 			Dir:      packageBinaryPath,
 			Writer: gen.SourceTextWith(
-				string(templates.Must("main.tml")),
+				string(templates.Must("shogun-main.tml")),
 				template.FuncMap{},
 				struct {
 				}{},
@@ -415,6 +489,128 @@ func buildDir(dir string, currentDir string, binaryPath string, skipBuild bool, 
 	}
 
 	return directives, nil
+}
+
+func buildFunctionList(dir string, currentDir string, ctx build.Context) ([]internal.Function, error) {
+	pkgs, err := ast.FilteredPackageWithBuildCtx(nolog, dir, ctx)
+	if err != nil {
+		events.Emit(metrics.Error(err).With("dir", currentDir))
+		return nil, err
+	}
+
+	var functions []internal.Function
+
+	for _, pkgItem := range pkgs {
+		for _, declr := range pkgItem.Packages {
+			for _, function := range declr.Functions {
+				def, err := function.Definition()
+				if err != nil {
+					return nil, err
+				}
+
+				var fn internal.Function
+				fn.Name = def.Name
+				fn.Description = function.Comments
+				fn.Synopses = doc.Synopsis(function.Comments)
+
+				argLen := len(def.Args)
+				retLen := len(def.Returns)
+
+				switch argLen {
+				case 0:
+					switch retLen {
+					case 0:
+						fn.Type = internal.NoValue
+					case 1:
+						ret := def.Returns[0]
+						if ret.Type != "error" {
+							return nil, fmt.Errorf("Function %q from %q returns a type that is not an error", function.FuncName, function.FilePath)
+						}
+
+						fn.Type = internal.NoInErrReturn
+					}
+				case 1:
+					arg := def.Args[0]
+
+					switch arg.Type {
+					case "internal.CancelContext":
+						switch retLen {
+						case 0:
+							fn.Type = internal.CancelContextInNoErrReturn
+						case 1:
+							ret := def.Returns[0]
+							if ret.Type != "error" {
+								return nil, fmt.Errorf("Function %q from %q returns a type that is not an error", function.FuncName, function.FilePath)
+							}
+
+							fn.Type = internal.CancelContextInErrReturn
+						}
+					default:
+						return nil, errors.New("Only internal.CancelContext are allowed")
+					}
+				case 2:
+					arg := def.Args[0]
+
+					switch arg.Type {
+					case "internal.CancelContext":
+						switch retLen {
+						case 0:
+							fn.Type = internal.CancelContextInNoErrReturn
+						case 1:
+							ret := def.Returns[0]
+							if ret.Type != "error" {
+								return nil, fmt.Errorf("Function %q from %q returns a type that is not an error", function.FuncName, function.FilePath)
+							}
+
+							fn.Type = internal.CancelContextInErrReturn
+						}
+					case "io.Reader":
+						switch argLen {
+						case 0:
+							switch retLen {
+							case 0:
+								fn.Type = internal.ReaderInNoErrReturn
+							case 1:
+								ret := def.Returns[0]
+								if ret.Type != "error" {
+									return nil, fmt.Errorf("Function %q from %q returns a type that is not an error", function.FuncName, function.FilePath)
+								}
+
+								fn.Type = internal.ReaderInErrReturn
+							}
+						case 1:
+						case 2:
+							arg2 := def.Args[1]
+
+							if arg2.Type != "io.WriterCloser" {
+								return nil, fmt.Errorf("Function %q from %q must match\n - func(io.Reader, io.WriteCloser)\n - func(internal.CancelContext, io.Reader, io.WriteCloser)", function.FuncName, function.FilePath)
+							}
+
+						}
+					case "map[string]interface{}":
+					default:
+					}
+				case 3:
+				}
+
+				functions = append(functions, fn)
+			}
+		}
+	}
+
+	return functions, nil
+}
+
+func addtoGitIgnore(ignoreFile string) error {
+	gitignore, err := os.OpenFile(ignoreFile, os.O_CREATE|os.O_APPEND|os.O_WRONLY, 0644)
+	if err != nil {
+		return err
+	}
+
+	defer gitignore.Close()
+	gitignore.Write([]byte(ignoreAddition))
+	gitignore.Write([]byte("\n"))
+	return nil
 }
 
 func hasDir(dir string) bool {

@@ -2,6 +2,8 @@
 
 package katanas
 
-func Hello() {
+import "fmt"
 
+func Hello() {
+	fmt.Printf("Hello")
 }

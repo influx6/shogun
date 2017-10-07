@@ -92,7 +92,7 @@ func helpAction(c *cli.Context) {
       fmt.Printf("Name: {{.Name}}\n\n")
 
       if fullComment {
-        fmt.Printf("Description:\n {{.Comments }}\n\n")
+        fmt.Printf("Description:\n {{.Description }}\n\n")
       }else{
         fmt.Printf("Description:\n {{.Synopses }}\n\n")
       }
@@ -110,8 +110,3 @@ func helpAction(c *cli.Context) {
       fmt.Printf("No samurai katana function with name %+q", funcName)
   }
 }
-
-{{ range := .Functions }}
-{{ .Doc }}
-{{ .Source }}
-{{ end }}
