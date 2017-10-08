@@ -1,47 +1,49 @@
 package internal
 
-// const defines available ExecType for shogun selected types
+// const for return state.
 const (
-	NoValue ExecType = iota
-	NoInErrReturn
-	ReaderInErrReturn
-	ReaderInNoErrReturn
-	CancelContextInErrReturn
-	CancelContextInNoErrReturn
+	NoReturn = iota << 10
+	ErrorReturn
+	UnknownErrorReturn
 )
 
-// type NoValueFunc func()
+// consts for use or absence of context.
+const (
+	NoContext = iota << 30
+	UseGoogleContext
+	UseFauxCancelContext
+	UseValueBagContext
+	UseUnknownContext
+)
 
-// type NoInErrReturnValueFunc func() error
+// const for input state.
+const (
+	NoArgument                          = iota << 20 // is func()
+	WithMapArgument                                  // is func(map[string]interface{})
+	WithStructArgument                               // is func(Movie)
+	WithInterfaceArgument                            // is func(IMovie)
+	WithImportedObjectArgument                       // is func(types.IMovie)
+	WithReaderArgument                               // is func(io.Reader)
+	WithWriteCloserArgument                          // is func(io.WriteCloser)
+	WithStructAndWriteCloserArgument                 // is func(Movie, io.WriteCloser)
+	WithInterfaceAndWriteCloserArgument              // is func(IMovie, io.WriteCloser)
+	WithImportedAndWriteCloserArgument               // is func(types.IMovie, io.WriteCloser)
+	WithReaderAndWriteCloserArgument                 // is func(io.Reader, io.WriteCloser)
+	WithUnknownArgument
+)
 
-// type ContextInNoValueFunc func(CancelContext)
-
-// type ContextInErrReturnValueFunc func(CancelContext) error
-
-// type MapInReturnErrorFunc func(CancelContext, map[string]interface{}) error
-
-// type StructInReturnErrorFunc func(CancelContext, Movie{Name string `json:"name"`}) error
-
-// type TypeInReturnErrorFunc func(CancelContext, interface{}) error
-
-// type TypeWriteCloserInReturnErrorFunc func(CancelContext, interface{}, io.WriteCloser) error
-
-// type ReaderInReturnErrorFunc func(CancelContext, io.Reader) error
-
-// type ReaderWriteCloserInReturnErrorFunc func(CancelContext, io.Reader, io.WriteCloser) error
-
-// ExecType defines a hint type to represent a giving function argument and return type.
-type ExecType int
-
-// CancelContext defines a type which provides Done signal for cancelling operations.
-type CancelContext interface {
-	Done() <-chan struct{}
+// VarMeta defines a struct to hold object details.
+type VarMeta struct {
+	Import     string
+	ImportNick string
+	Type       string
+	TypeAddr   string
 }
 
 // Function defines a struct type that represent meta details of a giving function.
 type Function struct {
-	UseContext  bool
-	Type        ExecType
+	Context     int
+	Type        int
 	Name        string
 	Exported    bool
 	From        string
@@ -49,4 +51,5 @@ type Function struct {
 	Source      string
 	Description string
 	Depends     []string
+	Imports     []VarMeta
 }

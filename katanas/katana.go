@@ -9,12 +9,12 @@ package katanas
 import (
 	"io"
 
-	"github.com/influx6/shogun/internal"
+	"github.com/influx6/faux/context"
+	ty "github.com/influx6/shogun/katanas/types"
 )
 
-type Woofer struct {
-	Name   string `json:"name"`
-	Caller string `json:"caller"`
+type wondra struct {
+	Name string
 }
 
 func Draw() {}
@@ -25,33 +25,46 @@ func Slash() error {
 	return nil
 }
 
-func Buba(ctx internal.CancelContext) {
+// Buba is bub.
+func Buba(ctx context.ValueBagContext) {
 }
 
-func Bob(ctx internal.CancelContext) error {
+func Bob(ctx context.CancelContext) error {
 	return nil
 }
 
-func Jija(ctx internal.CancelContext, mp Woofer) error {
+func Jija(ctx context.CancelContext, mp ty.Woofer) error {
 	return nil
 }
 
-func Juga(ctx internal.CancelContext, r io.Reader) error {
+func JijaPointer(ctx context.CancelContext, mp *ty.Woofer) error {
 	return nil
 }
 
-func Buba(ctx internal.CancelContext, mp interface{}) error {
+func Juga(ctx context.CancelContext, r io.Reader) error {
 	return nil
 }
 
-func Biga(ctx internal.CancelContext, r io.Reader, w io.WriteCloser) error {
+func Boba(ctx context.CancelContext, mp ty.IBlob) error {
 	return nil
 }
 
-func Bub(ctx internal.CancelContext, mp map[string]interface{}) error {
+func Biga(ctx context.CancelContext, r io.Reader, w io.WriteCloser) error {
 	return nil
 }
 
-func Guga(ctx internal.CancelContext, mp interface{}, w io.WriteCloser) error {
+func Nack(ctx context.CancelContext, mp map[string]interface{}) error {
+	return nil
+}
+
+func Rulla(ctx context.CancelContext, mp wondra, w io.WriteCloser) error {
+	return nil
+}
+
+func Hulla(ctx context.CancelContext, mp *wondra, w io.WriteCloser) error {
+	return nil
+}
+
+func Guga(ctx context.CancelContext, mp ty.IBob, w io.WriteCloser) error {
 	return nil
 }
