@@ -60,11 +60,11 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, bina
 func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string, binaryPath string, skipBuild bool, ctx build.Context) ([]gen.WriteDirective, error) {
 	pkgs, err := ast.FilteredPackageWithBuildCtx(vlog, dir, ctx)
 	if err != nil {
-		events.Emit(metrics.Error(err).With("dir", dir).With("binary_path", binaryPath))
 		if _, ok := err.(*build.NoGoError); ok {
 			return nil, nil
 		}
 
+		events.Emit(metrics.Error(err).With("dir", dir).With("binary_path", binaryPath))
 		return nil, err
 	}
 

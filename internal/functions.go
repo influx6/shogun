@@ -44,6 +44,7 @@ type VarMeta struct {
 type Function struct {
 	Context     int
 	Type        int
+	Return      int
 	Name        string
 	Exported    bool
 	From        string

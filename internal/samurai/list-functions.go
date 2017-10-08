@@ -46,10 +46,11 @@ func ListFunctions(vlog, events metrics.Metrics, targetDir string, ctx build.Con
 func ListFunctionsForDir(vlog, events metrics.Metrics, dir string, ctx build.Context) ([]internal.Function, error) {
 	pkgs, err := ast.FilteredPackageWithBuildCtx(vlog, dir, ctx)
 	if err != nil {
-		events.Emit(metrics.Error(err).With("dir", dir))
 		if _, ok := err.(*build.NoGoError); ok {
 			return nil, nil
 		}
+
+		events.Emit(metrics.Error(err).With("dir", dir))
 		return nil, err
 	}
 
@@ -119,8 +120,16 @@ func ListFunctionsForDir(vlog, events metrics.Metrics, dir string, ctx build.Con
 
 				var fn internal.Function
 				fn.Name = def.Name
+				fn.Imports = importList
+				fn.Type = argumentType
+				fn.Return = returnType
+				fn.Context = contextType
 				fn.Description = function.Comments
 				fn.Synopses = doc.Synopsis(function.Comments)
+
+				if depends, ok := function.GetAnnotation("@depends"); ok {
+					fn.Depends = append(fn.Depends, depends.Arguments...)
+				}
 
 				fmt.Printf("Name: %q - Synopse: %q - Imports: %+q\n", fn.Name, fn.Synopses, importList)
 
@@ -157,57 +166,44 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, []internal.VarM
 		}
 		return internal.WithUnknownArgument, nil
 	default:
+		params := []internal.VarMeta{
+			{
+				Type:       arg.Type,
+				TypeAddr:   arg.ExType,
+				Import:     arg.Import.Path,
+				ImportNick: arg.Import.Name,
+			},
+		}
+
 		if arg.StructObject != nil {
 			if arg2 == nil {
-				return internal.WithStructArgument, []internal.VarMeta{
-					{
-						Type:       arg.Type,
-						TypeAddr:   arg.ExType,
-						Import:     arg.Import.Path,
-						ImportNick: arg.Import.Name,
-					},
-				}
+				return internal.WithStructArgument, params
 			}
 
 			if arg2.Type == ioWriteCloser {
-				return internal.WithStructAndWriteCloserArgument, nil
+				return internal.WithStructAndWriteCloserArgument, params
 			}
 		}
 
 		if arg.InterfaceObject != nil {
 			if arg2 == nil {
-				return internal.WithInterfaceArgument, []internal.VarMeta{
-					{
-						Type:       arg.Type,
-						TypeAddr:   arg.ExType,
-						Import:     arg.Import.Path,
-						ImportNick: arg.Import.Name,
-					},
-				}
+				return internal.WithInterfaceArgument, params
 			}
 
 			if arg2.Type == ioWriteCloser {
-				return internal.WithInterfaceAndWriteCloserArgument, nil
+				return internal.WithInterfaceAndWriteCloserArgument, params
 			}
 		}
 
 		if arg.ImportedObject != nil {
 			if arg2 == nil {
-				return internal.WithImportedAndWriteCloserArgument, []internal.VarMeta{
-					{
-						Type:       arg.Type,
-						TypeAddr:   arg.ExType,
-						Import:     arg.Import.Path,
-						ImportNick: arg.Import.Name,
-					},
-				}
+				return internal.WithImportedAndWriteCloserArgument, params
 			}
 
 			if arg2.Type == ioWriteCloser {
-				return internal.WithInterfaceAndWriteCloserArgument, nil
+				return internal.WithInterfaceAndWriteCloserArgument, params
 			}
 		}
-
 	}
 
 	return internal.WithUnknownArgument, nil
