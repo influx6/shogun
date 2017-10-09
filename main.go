@@ -336,10 +336,11 @@ func buildAction(c *cli.Context) error {
 		return err
 	}
 
-	if err := ast.SimpleWriteDirectives("./", true, directives...); err != nil {
-		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath).With("doSubDir", hasShogunateDir))
-		return err
-	}
+	// if err := ast.SimpleWriteDirectives("./", true, directives...); err != nil {
+	// 	events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath).With("doSubDir", hasShogunateDir))
+	// 	return err
+	// }
+	_ = directives
 
 	return nil
 }

@@ -42,15 +42,19 @@ type VarMeta struct {
 
 // Function defines a struct type that represent meta details of a giving function.
 type Function struct {
-	Context     int
-	Type        int
-	Return      int
-	Name        string
-	Exported    bool
-	From        string
-	Synopses    string
-	Source      string
-	Description string
-	Depends     []string
-	Imports     []VarMeta
+	Context         int
+	Type            int
+	Return          int
+	Exported        bool
+	Name            string
+	From            string
+	Synopses        string
+	Source          string
+	Description     string
+	Package         string
+	PackagePath     string
+	PackageFile     string
+	PackageFileName string
+	Depends         []string
+	Imports         []VarMeta
 }

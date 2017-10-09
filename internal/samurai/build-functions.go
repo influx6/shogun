@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"context"
 	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"os"
@@ -19,21 +20,34 @@ import (
 	"github.com/influx6/gobuild/build"
 	"github.com/influx6/moz/ast"
 	"github.com/influx6/moz/gen"
+	"github.com/influx6/shogun/internal"
 	"github.com/influx6/shogun/templates"
 )
 
 var (
 	ignoreAddition = ".shogun"
+	cmdDir         = "cmd"
 	goosRuntime    = runtime.GOOS
 	packageReg     = regexp.MustCompile(`package \w+`)
 )
 
+// BuildFunctions holds all build directives from processed packages.
+type BuildFunctions struct {
+	Dir  string
+	Main BuildList
+	Subs map[string]BuildList
+}
+
 // BuildPackage builds a shogun binarie commandline files for giving directory and 1 level directory.
-func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, binaryPath string, skipBuild bool, ctx build.Context) ([]gen.WriteDirective, error) {
-	directives, err := BuildPackageForDir(vlog, events, dir, binaryPath, skipBuild, ctx)
+func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, binaryPath string, skipBuild bool, ctx build.Context) (BuildFunctions, error) {
+	var list BuildFunctions
+	list.Subs = make(map[string]BuildList)
+
+	var err error
+	list.Main, err = BuildPackageForDir(vlog, events, dir, binaryPath, cmdDir, skipBuild, ctx)
 	if err != nil {
 		events.Emit(metrics.Error(err).With("dir", dir).With("binary_path", binaryPath))
-		return nil, err
+		return list, err
 	}
 
 	if err := vfiles.WalkDirSurface(dir, func(rel string, abs string, info os.FileInfo) error {
@@ -41,48 +55,61 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, bina
 			return nil
 		}
 
-		res, err := BuildPackageForDir(vlog, events, abs, binaryPath, skipBuild, ctx)
-		if err != nil {
-			return err
+		res, err2 := BuildPackageForDir(vlog, events, abs, cmdDir, binaryPath, skipBuild, ctx)
+		if err2 != nil {
+			events.Emit(metrics.Error(err2).With("dir", abs).With("binary_path", binaryPath))
+			return err2
 		}
 
-		directives = append(directives, res...)
+		list.Subs[rel] = res
 		return nil
 	}); err != nil {
 		events.Emit(metrics.Error(err).With("dir", dir))
-		return directives, err
+		return list, err
 	}
 
-	return directives, nil
+	return list, nil
+}
+
+// BuildList holds a procssed package list of write directives.
+type BuildList struct {
+	Hash        string
+	Path        string
+	PkgPath     string
+	PkgFilePath string
+	List        []gen.WriteDirective
+	Functions   []internal.Function
 }
 
 // BuildPackageForDir generates needed package files for creating new function based executable binaries.
-func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string, binaryPath string, skipBuild bool, ctx build.Context) ([]gen.WriteDirective, error) {
+func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string, cmd string, binaryPath string, skipBuild bool, ctx build.Context) (BuildList, error) {
+	var list BuildList
+	list.Path = dir
+
 	pkgs, err := ast.FilteredPackageWithBuildCtx(vlog, dir, ctx)
 	if err != nil {
 		if _, ok := err.(*build.NoGoError); ok {
-			return nil, nil
+			return list, nil
 		}
 
-		events.Emit(metrics.Error(err).With("dir", dir).With("binary_path", binaryPath))
-		return nil, err
+		return list, err
 	}
 
-	var directives []gen.WriteDirective
+	var hash []byte
 
 	for _, pkgItem := range pkgs {
 		pkgHash, err := generateHash(pkgItem.Files)
 		if err != nil {
-			events.Emit(metrics.Error(err).With("dir", dir).With("binary_path", binaryPath))
-			return nil, err
+			return list, err
 		}
+
+		hash = append(hash, []byte(pkgHash)...)
 
 		var binaryName, binaryExeName string
 		if binAnnons := pkgItem.AnnotationsFor("@binaryName"); len(binAnnons) != 0 {
 			if len(binAnnons[0].Arguments) == 0 {
-				err := fmt.Errorf("binaryName annotation requires a single argument has the name of binary file")
-				events.Emit(metrics.Error(err).With("dir", dir).With("binary_path", binaryPath).With("package", pkgItem.Path))
-				continue
+				err := fmt.Errorf("InvalidBinaryName(File: %q): expected format @binaryName(name => NAME)", pkgItem.FilePath)
+				return list, err
 			}
 
 			binaryName = strings.ToLower(binAnnons[0].Param("name"))
@@ -95,14 +122,19 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 			binaryExeName = fmt.Sprintf("%s.exec", binaryName)
 		}
 
-		// if the current hash we received is exactly like current calculated hash then continue to another package.
-		if currentBinHash, err := binHash(vlog, filepath.Join(binaryPath, binaryName)); err == nil && currentBinHash == pkgHash {
-			continue
-		}
-
-		packageBinaryPath := filepath.Join(".shogun", binaryName)
+		packageBinaryPath := filepath.Join(cmd, binaryName)
+		packageBinaryFilePath := filepath.Join(cmd, binaryName, "pkg")
 
 		for _, declr := range pkgItem.Packages {
+
+			// Retrieve function list.
+			fnsList, err := pullFunctionFromDeclr(pkgItem, &declr)
+			if err != nil {
+				return list, err
+			}
+
+			list.Functions = append(list.Functions, fnsList...)
+
 			source := strings.Replace(declr.Source, strings.Join(declr.Comments, "\n"), "", -1)
 			packageIndex := strings.Index(source, "package")
 			packagePart := packageReg.FindString(source)
@@ -110,9 +142,9 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 			source = source[packageIndex:]
 			source = strings.TrimSpace(strings.Replace(source, packagePart, "", 1))
 
-			directives = append(directives, gen.WriteDirective{
+			list.List = append(list.List, gen.WriteDirective{
 				FileName: filepath.Base(declr.FilePath),
-				Dir:      packageBinaryPath,
+				Dir:      packageBinaryFilePath,
 				Writer: gen.SourceTextWith(
 					string(templates.Must("shogun-src.tml")),
 					template.FuncMap{},
@@ -125,7 +157,23 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 			})
 		}
 
-		directives = append(directives, gen.WriteDirective{
+		list.List = append(list.List, gen.WriteDirective{
+			FileName: fmt.Sprintf("pkg_%s.go", binaryName),
+			Dir:      packageBinaryFilePath,
+			Writer: gen.SourceTextWith(
+				string(templates.Must("shogun-src-pkg.tml")),
+				template.FuncMap{},
+				struct {
+					BinaryName string
+					Functions  []internal.Function
+				}{
+					BinaryName: binaryName,
+					Functions:  list.Functions,
+				},
+			),
+		})
+
+		list.List = append(list.List, gen.WriteDirective{
 			FileName: "main.go",
 			Dir:      packageBinaryPath,
 			Writer: gen.SourceTextWith(
@@ -161,7 +209,7 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 		})
 	}
 
-	return directives, nil
+	return list, nil
 }
 
 func binHash(nlog metrics.Metrics, binPath string) (string, error) {
@@ -175,7 +223,7 @@ func binHash(nlog metrics.Metrics, binPath string) (string, error) {
 }
 
 func generateHash(files []string) (string, error) {
-	var hashes []string
+	var hashes []byte
 
 	for _, file := range files {
 		hash, err := generateFileHash(file)
@@ -183,10 +231,10 @@ func generateHash(files []string) (string, error) {
 			return "", err
 		}
 
-		hashes = append(hashes, hash)
+		hashes = append(hashes, []byte(hash)...)
 	}
 
-	return strings.Join(hashes, ""), nil
+	return base64.StdEncoding.EncodeToString(hashes), nil
 }
 
 func generateFileHash(file string) (string, error) {

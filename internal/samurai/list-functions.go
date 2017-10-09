@@ -1,7 +1,6 @@
 package samurai
 
 import (
-	"fmt"
 	"go/doc"
 	"os"
 
@@ -12,133 +11,218 @@ import (
 	"github.com/influx6/shogun/internal"
 )
 
+// FunctionList holds a list of functions from a main package and
+// all other subpackages retrieved.
+type FunctionList struct {
+	Dir  string
+	Main PackageFunctionList
+	Subs map[string]PackageFunctionList
+}
+
 // ListFunctions returns all functions retrieved from the directory filtered by the build.Context.
-func ListFunctions(vlog, events metrics.Metrics, targetDir string, ctx build.Context) ([]internal.Function, error) {
+func ListFunctions(vlog, events metrics.Metrics, targetDir string, ctx build.Context) (FunctionList, error) {
+	var list FunctionList
+	list.Dir = targetDir
+	list.Subs = make(map[string]PackageFunctionList)
+
 	// Build shogunate directory itself first.
-	functions, err := ListFunctionsForDir(vlog, events, targetDir, ctx)
+	var err error
+	list.Main, err = ListFunctionsForDir(vlog, events, targetDir, ctx)
 	if err != nil {
 		events.Emit(metrics.Errorf("Failed to generate function list : %+q", err))
-		return nil, err
+		return list, err
 	}
 
-	if err := vfiles.WalkDirSurface(targetDir, func(rel string, abs string, info os.FileInfo) error {
+	if err = vfiles.WalkDirSurface(targetDir, func(rel string, abs string, info os.FileInfo) error {
 		if !info.IsDir() {
 			return nil
 		}
 
-		res, err := ListFunctionsForDir(vlog, events, abs, ctx)
-		if err != nil {
-			return err
+		res, err2 := ListFunctionsForDir(vlog, events, abs, ctx)
+		if err2 != nil {
+			return err2
 		}
 
-		functions = append(functions, res...)
+		list.Subs[rel] = res
 		return nil
 	}); err != nil {
 		events.Emit(metrics.Error(err).With("dir", targetDir))
-		return functions, err
+		return list, err
 	}
 
-	return functions, nil
+	return list, nil
+}
+
+// PackageFunctionList holds the list of processed functions from individual packages.
+type PackageFunctionList struct {
+	Path string
+	Hash string
+	List []internal.Function
 }
 
 // ListFunctionsForDir iterates all directories and retrieves functon list of all declared functions
 // matching the shegun format.
-func ListFunctionsForDir(vlog, events metrics.Metrics, dir string, ctx build.Context) ([]internal.Function, error) {
+func ListFunctionsForDir(vlog, events metrics.Metrics, dir string, ctx build.Context) (PackageFunctionList, error) {
+	var pkgFuncs PackageFunctionList
+	pkgFuncs.Path = dir
+
 	pkgs, err := ast.FilteredPackageWithBuildCtx(vlog, dir, ctx)
 	if err != nil {
 		if _, ok := err.(*build.NoGoError); ok {
-			return nil, nil
+			return pkgFuncs, nil
 		}
 
 		events.Emit(metrics.Error(err).With("dir", dir))
-		return nil, err
+		return pkgFuncs, err
 	}
 
-	var functions []internal.Function
+	var hash []byte
 
 	for _, pkgItem := range pkgs {
-		for _, declr := range pkgItem.Packages {
-			for _, function := range declr.Functions {
-				def, err := function.Definition(&declr)
-				if err != nil {
-					return nil, err
-				}
+		pkgHash, err := generateHash(pkgItem.Files)
+		if err != nil {
+			return pkgFuncs, err
+		}
 
-				argLen := len(def.Args)
-				retLen := len(def.Returns)
+		hash = append(hash, []byte(pkgHash)...)
 
-				var returnType int
-				var argumentType int
-				var contextType int
+		fns, err := pullFunctions(pkgItem)
+		if err != nil {
+			return pkgFuncs, err
+		}
 
-				var importList []internal.VarMeta
+		pkgFuncs.List = append(pkgFuncs.List, fns...)
+	}
 
-				switch retLen {
-				case 0:
-					returnType = internal.NoReturn
-				case 1:
-					returnType = getReturnState(def.Returns[0])
-				}
+	pkgFuncs.Hash = string(hash)
 
-				switch argLen {
-				case 0:
-					contextType = internal.NoContext
-					argumentType = internal.NoArgument
-				case 1:
-					contextType = getContextState(def.Args[0])
-					if contextType == internal.UseUnknownContext {
-						contextType = internal.NoContext
-						argumentType, importList = getArgumentsState(def.Args[0], nil)
-					}
-				case 2:
-					contextType = getContextState(def.Args[0])
-					if contextType == internal.UseUnknownContext {
-						contextType = internal.NoContext
-						argumentType, importList = getArgumentsState(def.Args[0], &def.Args[1])
-					} else {
-						argumentType, importList = getArgumentsState(def.Args[1], nil)
-					}
-				case 3:
-					contextType = getContextState(def.Args[0])
-					argumentType, importList = getArgumentsState(def.Args[1], &def.Args[2])
-				}
+	return pkgFuncs, nil
+}
 
-				// If the argument format does not match allowed, skip.
-				if argumentType == internal.WithUnknownArgument {
-					continue
-				}
+func pullFunctions(pkg ast.Package) ([]internal.Function, error) {
+	var list []internal.Function
 
-				// If the Context is unknown then skip.
-				if contextType == internal.UseUnknownContext {
-					continue
-				}
-
-				// If the return format is unknown then skip.
-				if returnType == internal.UnknownErrorReturn {
-					continue
-				}
-
-				var fn internal.Function
-				fn.Name = def.Name
-				fn.Imports = importList
-				fn.Type = argumentType
-				fn.Return = returnType
-				fn.Context = contextType
-				fn.Description = function.Comments
-				fn.Synopses = doc.Synopsis(function.Comments)
-
-				if depends, ok := function.GetAnnotation("@depends"); ok {
-					fn.Depends = append(fn.Depends, depends.Arguments...)
-				}
-
-				fmt.Printf("Name: %q - Synopse: %q - Imports: %+q\n", fn.Name, fn.Synopses, importList)
-
-				functions = append(functions, fn)
+	for _, declr := range pkg.Packages {
+		for _, function := range declr.Functions {
+			fn, ignore, err := pullFunction(&function, &declr)
+			if err != nil {
+				return list, err
 			}
+
+			if ignore {
+				continue
+			}
+
+			list = append(list, fn)
 		}
 	}
 
-	return functions, nil
+	return list, nil
+}
+
+// pullFunctionFromDeclr returns all function details within the giving PackageDeclaration.
+func pullFunctionFromDeclr(pkg ast.Package, declr *ast.PackageDeclaration) ([]internal.Function, error) {
+	var list []internal.Function
+
+	for _, function := range declr.Functions {
+		fn, ignore, err := pullFunction(&function, declr)
+		if err != nil {
+			return list, err
+		}
+
+		if ignore {
+			continue
+		}
+
+		list = append(list, fn)
+	}
+
+	return list, nil
+}
+
+func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) (internal.Function, bool, error) {
+	var fn internal.Function
+
+	if function.HasAnnotation("@ignore") {
+		return fn, true, nil
+	}
+
+	def, err := function.Definition(declr)
+	if err != nil {
+		return fn, true, err
+	}
+
+	argLen := len(def.Args)
+	retLen := len(def.Returns)
+
+	var returnType int
+	var argumentType int
+	var contextType int
+
+	var importList []internal.VarMeta
+
+	switch retLen {
+	case 0:
+		returnType = internal.NoReturn
+	case 1:
+		returnType = getReturnState(def.Returns[0])
+	}
+
+	switch argLen {
+	case 0:
+		contextType = internal.NoContext
+		argumentType = internal.NoArgument
+	case 1:
+		contextType = getContextState(def.Args[0])
+		if contextType == internal.UseUnknownContext {
+			contextType = internal.NoContext
+			argumentType, importList = getArgumentsState(def.Args[0], nil)
+		}
+	case 2:
+		contextType = getContextState(def.Args[0])
+		if contextType == internal.UseUnknownContext {
+			contextType = internal.NoContext
+			argumentType, importList = getArgumentsState(def.Args[0], &def.Args[1])
+		} else {
+			argumentType, importList = getArgumentsState(def.Args[1], nil)
+		}
+	case 3:
+		contextType = getContextState(def.Args[0])
+		argumentType, importList = getArgumentsState(def.Args[1], &def.Args[2])
+	}
+
+	// If the argument format does not match allowed, skip.
+	if argumentType == internal.WithUnknownArgument {
+		return fn, true, nil
+	}
+
+	// If the Context is unknown then skip.
+	if contextType == internal.UseUnknownContext {
+		return fn, true, nil
+	}
+
+	// If the return format is unknown then skip.
+	if returnType == internal.UnknownErrorReturn {
+		return fn, true, nil
+	}
+
+	fn.Name = def.Name
+	fn.Imports = importList
+	fn.Type = argumentType
+	fn.Return = returnType
+	fn.Context = contextType
+	fn.Package = function.Package
+	fn.PackagePath = function.Path
+	fn.PackageFile = function.FilePath
+	fn.PackageFileName = function.File
+	fn.Description = function.Comments
+	fn.Synopses = doc.Synopsis(function.Comments)
+
+	if depends, ok := function.GetAnnotation("@depends"); ok {
+		fn.Depends = append(fn.Depends, depends.Arguments...)
+	}
+
+	return fn, false, nil
 }
 
 var ioWriteCloser = "io.WriteCloser"
