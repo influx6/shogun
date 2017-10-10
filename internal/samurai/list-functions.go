@@ -43,7 +43,8 @@ func ListFunctions(vlog, events metrics.Metrics, targetDir string, ctx build.Con
 			return err2
 		}
 
-		list.Subs[rel] = res
+		res.RelPath = rel
+		list.Subs[res.Path] = res
 		return nil
 	}); err != nil {
 		events.Emit(metrics.Error(err).With("dir", targetDir))
@@ -55,9 +56,10 @@ func ListFunctions(vlog, events metrics.Metrics, targetDir string, ctx build.Con
 
 // PackageFunctionList holds the list of processed functions from individual packages.
 type PackageFunctionList struct {
-	Path string
-	Hash string
-	List []internal.Function
+	Path    string
+	RelPath string
+	Hash    string
+	List    []internal.Function
 }
 
 // ListFunctionsForDir iterates all directories and retrieves functon list of all declared functions

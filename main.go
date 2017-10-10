@@ -249,25 +249,9 @@ func initAction(c *cli.Context) error {
 		return err
 	}
 
-	ignoreFile := filepath.Join(currentDir, ".gitignore")
-	if _, ierr := os.Stat(ignoreFile); ierr != nil {
-		if igerr := addtoGitIgnore(ignoreFile); igerr != nil {
-			events.Emit(metrics.Errorf("Failed to add changes to .gitignore: %+q", igerr).With("dir", currentDir))
-			return igerr
-		}
-	}
-
-	ignoreFileData, err := ioutil.ReadFile(ignoreFile)
-	if err != nil {
-		events.Emit(metrics.Errorf("Failed to read data from .gitignore: %+q", err).With("dir", currentDir).With("git_ignore", ignoreFile))
-		return err
-	}
-
-	if !bytes.Contains(ignoreFileData, []byte(ignoreAddition)) {
-		if igerr := addtoGitIgnore(ignoreFile); igerr != nil {
-			events.Emit(metrics.Errorf("Failed to add changes to .gitignore: %+q", igerr).With("dir", currentDir))
-			return igerr
-		}
+	if igerr := checkAndAddIgnore(currentDir); igerr != nil {
+		events.Emit(metrics.Errorf("Failed to add changes to .gitignore: %+q", igerr).With("dir", currentDir))
+		return igerr
 	}
 
 	return nil
@@ -318,6 +302,11 @@ func buildAction(c *cli.Context) error {
 		return err
 	}
 
+	if igerr := checkAndAddIgnore(currentDir); igerr != nil {
+		events.Emit(metrics.Errorf("Failed to add changes to .gitignore: %+q", igerr).With("dir", currentDir))
+		return igerr
+	}
+
 	targetDir := filepath.Join(currentDir, tgDir)
 	cmdDir := filepath.Join(".shogun", "cmd")
 
@@ -325,23 +314,76 @@ func buildAction(c *cli.Context) error {
 	ctx.BuildTags = append(ctx.BuildTags, "shogun")
 	ctx.RequiredTags = append(ctx.RequiredTags, "shogun")
 
-	// Build shogunate directory itself first.
+	// Build hash list for directories.
+	hashList, err := samurai.ListPackageHash(nolog, events, targetDir, ctx)
+	if err != nil {
+		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
+		return err
+	}
+
+	// Build directories for commands.
 	directive, err := samurai.BuildPackage(nolog, events, targetDir, cmdDir, currentDir, binaryPath, skipBuild, ctx)
 	if err != nil {
 		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
 		return err
 	}
 
+	var subUpdated bool
+
 	for _, sub := range directive.Subs {
+		if hashData, ok := hashList.Subs[sub.Path]; ok {
+			hashFile := filepath.Join(currentDir, sub.PkgPath, ".hashfile")
+			prevHash, err := readFile(hashFile)
+
+			if err == nil && prevHash == hashData.Hash {
+				continue
+			}
+		}
+
+		// if PkgPath is empty then possibly not one we want to handle, all must
+		// have a place to store
+		if sub.PkgPath == "" || len(sub.List) == 0 {
+			continue
+		}
+
+		subUpdated = true
 		if err := ast.SimpleWriteDirectives("./", true, sub.List...); err != nil {
 			events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
 			return err
 		}
 	}
 
+	// Validate hash of main cmd.
+	hashFile := filepath.Join(currentDir, directive.Main.PkgPath, ".hashfile")
+	if prevHash, err := readFile(hashFile); err == nil && prevHash == hashList.Main.Hash && !subUpdated {
+		return nil
+	}
+
 	if err := ast.SimpleWriteDirectives("./", true, directive.Main.List...); err != nil {
 		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
 		return err
+	}
+
+	return nil
+}
+
+func checkAndAddIgnore(currentDir string) error {
+	ignoreFile := filepath.Join(currentDir, ".gitignore")
+	if _, ierr := os.Stat(ignoreFile); ierr != nil {
+		if igerr := addtoGitIgnore(ignoreFile); igerr != nil {
+			return igerr
+		}
+	}
+
+	ignoreFileData, err := ioutil.ReadFile(ignoreFile)
+	if err != nil {
+		return err
+	}
+
+	if !bytes.Contains(ignoreFileData, []byte(ignoreAddition)) {
+		if igerr := addtoGitIgnore(ignoreFile); igerr != nil {
+			return igerr
+		}
 	}
 
 	return nil
@@ -365,6 +407,11 @@ func hasDir(dir string) bool {
 	}
 
 	return false
+}
+
+func readFile(file string) (string, error) {
+	content, err := ioutil.ReadFile(file)
+	return string(bytes.TrimSpace(content)), err
 }
 
 func hasFile(file string) bool {

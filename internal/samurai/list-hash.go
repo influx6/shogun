@@ -12,9 +12,10 @@ import (
 // PackageHashList holds a list of hashes from a main package and
 // all other subpackages retrieved.
 type PackageHashList struct {
-	Dir  string
-	Main HashList
-	Subs map[string]HashList
+	Dir       string              `json:"dir"`
+	SuperHash string              `json:"super_hash"`
+	Main      HashList            `json:"main"`
+	Subs      map[string]HashList `json:"subs"`
 }
 
 // ListPackageHash returns all functions retrieved from the directory filtered by the build.Context.
@@ -31,6 +32,9 @@ func ListPackageHash(vlog, events metrics.Metrics, targetDir string, ctx build.C
 		return list, err
 	}
 
+	var hash []byte
+	hash = append(hash, []byte(list.Main.Hash)...)
+
 	if err = vfiles.WalkDirSurface(targetDir, func(rel string, abs string, info os.FileInfo) error {
 		if !info.IsDir() {
 			return nil
@@ -41,21 +45,25 @@ func ListPackageHash(vlog, events metrics.Metrics, targetDir string, ctx build.C
 			return err2
 		}
 
-		list.Subs[rel] = res
+		res.RelPath = rel
+		list.Subs[res.Path] = res
+		hash = append(hash, []byte(res.Hash)...)
 		return nil
 	}); err != nil {
 		events.Emit(metrics.Error(err).With("dir", targetDir))
 		return list, err
 	}
 
+	list.SuperHash = string(hash)
 	return list, nil
 }
 
 // HashList holds the list of processed functions from individual packages.
 type HashList struct {
-	Path     string
-	Hash     string
-	Packages map[string]string
+	Path     string            `json:"path"`
+	RelPath  string            `json:"relpath,omitempty"`
+	Hash     string            `json:"hash"`
+	Packages map[string]string `json:"packages"`
 }
 
 // HashPackages iterates all directories and generates package hashes of all declared functions

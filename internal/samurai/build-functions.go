@@ -61,7 +61,8 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdD
 			return err2
 		}
 
-		list.Subs[rel] = res
+		res.RelPath = rel
+		list.Subs[res.Path] = res
 		return nil
 	}); err != nil {
 		events.Emit(metrics.Error(err).With("dir", dir))
@@ -75,9 +76,11 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdD
 type BuildList struct {
 	Hash          string
 	Path          string
+	RelPath       string
 	PkgPath       string
 	Packages      map[string]string
 	PackagesPaths map[string]string
+	BinaryPaths   map[string]string
 	List          []gen.WriteDirective
 	Functions     []internal.Function
 }
@@ -88,6 +91,7 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 	list.Path = dir
 	list.Packages = make(map[string]string)
 	list.PackagesPaths = make(map[string]string)
+	list.BinaryPaths = make(map[string]string)
 
 	pkgs, err := ast.FilteredPackageWithBuildCtx(vlog, dir, ctx)
 	if err != nil {
@@ -166,8 +170,11 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 			})
 		}
 
+		list.PkgPath = packageBinaryPath
 		list.Packages[binaryName] = totalPackagePath
 		list.PackagesPaths[binaryName] = totalPackageFilePath
+		list.BinaryPaths[pkgItem.FilePath] = binaryName
+
 		list.List = append(list.List, gen.WriteDirective{
 			FileName: fmt.Sprintf("pkg_%s.go", binaryFileName(binaryName)),
 			Dir:      packageBinaryFilePath,
@@ -181,6 +188,21 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 				}{
 					BinaryName: binaryName,
 					Functions:  list.Functions,
+				},
+			),
+		})
+
+		list.List = append(list.List, gen.WriteDirective{
+			FileName: ".hashfile",
+			Dir:      packageBinaryPath,
+			Writer: gen.SourceTextWithName(
+				"shogun:src-pkg-hash",
+				string(templates.Must("shogun-src-pkg-hash.tml")),
+				template.FuncMap{},
+				struct {
+					Hash string
+				}{
+					Hash: string(hash),
 				},
 			),
 		})
