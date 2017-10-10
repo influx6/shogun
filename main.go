@@ -36,9 +36,6 @@ var (
 	events           = metrics.New(custom.StackDisplay(os.Stdout))
 	packageReg       = regexp.MustCompile(`package \w+`)
 
-	errorArgumentMessage = `
-`
-
 	helpTemplate = `NAME:
 {{.Name}} - {{.Usage}}
 
@@ -111,13 +108,18 @@ func main() {
 			Name:   "build",
 			Action: buildAction,
 			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "d,dir",
+					Value: "",
+					Usage: "-dir=./katanas to build specific directory instead of root.",
+				},
 				cli.BoolFlag{
-					Name:  "up,usePkg",
-					Usage: "-usePkg=true",
+					Name:  "spkg,singlePkg",
+					Usage: "-singlePkg=true to only bundle seperate command binaries without combined binary",
 				},
 				cli.BoolFlag{
 					Name:  "skip,skipbuild",
-					Usage: "-skip=true",
+					Usage: "-skip=true to only build binary packages without generating binaries",
 				},
 			},
 		},
@@ -307,9 +309,7 @@ func listAction(c *cli.Context) error {
 
 func buildAction(c *cli.Context) error {
 	skipBuild := c.Bool("skipbuild")
-
-	var targetDir string
-	var hasShogunateDir bool
+	tgDir := c.String("dir")
 
 	binaryPath := binPath()
 	currentDir, err := os.Getwd()
@@ -318,29 +318,31 @@ func buildAction(c *cli.Context) error {
 		return err
 	}
 
-	targetDir = currentDir
-
-	if shogunate := filepath.Join(currentDir, shogunateDirName); hasDir(shogunate) {
-		hasShogunateDir = true
-		targetDir = shogunate
-	}
+	targetDir := filepath.Join(currentDir, tgDir)
+	cmdDir := filepath.Join(".shogun", "cmd")
 
 	ctx := build.Default
 	ctx.BuildTags = append(ctx.BuildTags, "shogun")
 	ctx.RequiredTags = append(ctx.RequiredTags, "shogun")
 
 	// Build shogunate directory itself first.
-	directives, err := samurai.BuildPackage(nolog, events, targetDir, binaryPath, skipBuild, ctx)
+	directive, err := samurai.BuildPackage(nolog, events, targetDir, cmdDir, currentDir, binaryPath, skipBuild, ctx)
 	if err != nil {
-		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath).With("doSubDir", hasShogunateDir))
+		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
 		return err
 	}
 
-	// if err := ast.SimpleWriteDirectives("./", true, directives...); err != nil {
-	// 	events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath).With("doSubDir", hasShogunateDir))
-	// 	return err
-	// }
-	_ = directives
+	for _, sub := range directive.Subs {
+		if err := ast.SimpleWriteDirectives("./", true, sub.List...); err != nil {
+			events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
+			return err
+		}
+	}
+
+	if err := ast.SimpleWriteDirectives("./", true, directive.Main.List...); err != nil {
+		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
+		return err
+	}
 
 	return nil
 }

@@ -1,10 +1,4 @@
-// +build shogun
-
-// Package katanas provides exported functions as tasks runnable from commandline.
-//
-// @binaryName(name => shogun-shell)
-//
-package katanas
+package pkg
 
 import (
 	"io"
