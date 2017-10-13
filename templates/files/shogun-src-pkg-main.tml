@@ -2,8 +2,8 @@ package main
 
 import (
 	"fmt"
-	"strings"
-	"runtime"
+	"io"
+	"os"
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
@@ -13,9 +13,10 @@ import (
 
 // vars ...
 var (
- Version = "1.0.0"
+ green = color.New(color.FgGreen)
  binHash = {{quote .Main.Hash}}
  binName = {{quote .Main.BinaryName }}
+ Version = green.Sprintf("1.0.0")
  helpTemplate = `{{.HelpFormat }}`
 )
 
@@ -49,7 +50,7 @@ func main(){
 }
 
 func helpAction(c *cli.Context) error {
-	if c.NArgs() == 0 {
+	if c.NArg() == 0 {
 		 fmt.Println(helpTemplate)
 	 return nil
 	}
@@ -65,7 +66,7 @@ func helpAction(c *cli.Context) error {
 }
 
 func mainAction(c *cli.Context) error {
-	if c.NArgs() == 0 {
+	if c.NArg() == 0 {
 	 fmt.Println(helpTemplate)
 	 return nil
 	}

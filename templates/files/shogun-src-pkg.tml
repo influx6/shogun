@@ -2,6 +2,10 @@
 
 package pkg
 
+import (
+  "io"
+)
+
 var (
   subCommands = map[string]bool{
 {{ range $_, $sub := .Subs}}
