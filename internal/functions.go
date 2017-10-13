@@ -58,3 +58,14 @@ type Function struct {
 	Depends         []string
 	Imports         []VarMeta
 }
+
+// PackageFunctions holds a package level function with it's path and name.
+type PackageFunctions struct {
+	Name       string
+	Hash       string
+	Path       string
+	Desc       string
+	FilePath   string
+	BinaryName string
+	List       []Function
+}

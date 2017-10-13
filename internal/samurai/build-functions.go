@@ -6,6 +6,7 @@ import (
 	"crypto/sha1"
 	"encoding/base64"
 	"fmt"
+	"go/doc"
 	"io"
 	"os"
 	"path/filepath"
@@ -57,6 +58,10 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdD
 
 		res, err2 := BuildPackageForDir(vlog, events, abs, cmdDir, cuDir, binaryPath, skipBuild, ctx)
 		if err2 != nil {
+			if err2 == ErrSkipDir {
+				return nil
+			}
+
 			events.Emit(metrics.Error(err2).With("dir", abs).With("binary_path", binaryPath))
 			return err2
 		}
@@ -82,7 +87,7 @@ type BuildList struct {
 	PackagesPaths map[string]string
 	BinaryPaths   map[string]string
 	List          []gen.WriteDirective
-	Functions     []internal.Function
+	Functions     []internal.PackageFunctions
 }
 
 // BuildPackageForDir generates needed package files for creating new function based executable binaries.
@@ -92,173 +97,195 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 	list.Packages = make(map[string]string)
 	list.PackagesPaths = make(map[string]string)
 	list.BinaryPaths = make(map[string]string)
+	// list.Package, _ = srcpath.RelativeToSrc(dir)
 
 	pkgs, err := ast.FilteredPackageWithBuildCtx(vlog, dir, ctx)
 	if err != nil {
 		if _, ok := err.(*build.NoGoError); ok {
-			return list, nil
+			return list, ErrSkipDir
 		}
 
 		return list, err
 	}
 
-	var hash []byte
+	if len(pkgs) == 0 {
+		return list, ErrSkipDir
+	}
 
-	for _, pkgItem := range pkgs {
-		pkgHash, err := generateHash(pkgItem.Files)
-		if err != nil {
-			return list, err
+	pkgItem := pkgs[0]
+	if pkgItem.HasAnnotation("@shogunIgnore") {
+		return list, ErrSkipDir
+	}
+
+	pkgHash, err := generateHash(pkgItem.Files)
+	if err != nil {
+		return list, err
+	}
+
+	var binaryName, binaryDesc, binaryExeName string
+	if binAnnons := pkgItem.AnnotationsFor("@binaryName"); len(binAnnons) != 0 {
+		if len(binAnnons[0].Arguments) == 0 {
+			err2 := fmt.Errorf("InvalidBinaryName(File: %q): expected format @binaryName(name => NAME)", pkgItem.FilePath)
+			return list, err2
 		}
 
-		hash = append(hash, []byte(pkgHash)...)
+		binaryName = strings.ToLower(binAnnons[0].Param("name"))
 
-		var binaryName, binaryExeName string
-		if binAnnons := pkgItem.AnnotationsFor("@binaryName"); len(binAnnons) != 0 {
-			if len(binAnnons[0].Arguments) == 0 {
-				err2 := fmt.Errorf("InvalidBinaryName(File: %q): expected format @binaryName(name => NAME)", pkgItem.FilePath)
-				return list, err2
-			}
-
-			binaryName = strings.ToLower(binAnnons[0].Param("name"))
-		} else {
-			binaryName = pkgItem.Name
+		desc := binAnnons[0].Param("desc")
+		if !strings.HasSuffix(desc, ".") {
+			desc += "."
 		}
 
-		binaryExeName = binaryName
-		if goosRuntime == "windows" {
-			binaryExeName = fmt.Sprintf("%s.exec", binaryName)
-		}
+		binaryDesc = doc.Synopsis(desc)
+	} else {
+		binaryName = pkgItem.Name
+	}
 
-		packageBinaryPath := filepath.Join(cmd, binaryName)
-		packageBinaryFilePath := filepath.Join(packageBinaryPath, "pkg")
-		totalPackageFilePath := filepath.Join(currentDir, packageBinaryFilePath)
-		totalPackagePath, err := srcpath.RelativeToSrc(totalPackageFilePath)
-		if err != nil {
-			return list, fmt.Errorf("Expected package should be located in GOPATH/src: %+q", err)
-		}
+	binaryExeName = binaryName
+	if goosRuntime == "windows" {
+		binaryExeName = fmt.Sprintf("%s.exec", binaryName)
+	}
 
-		for _, declr := range pkgItem.Packages {
+	packageBinaryPath := filepath.Join(cmd, binaryName)
+	packageBinaryFilePath := filepath.Join(packageBinaryPath, "pkg")
+	totalPackageFilePath := filepath.Join(currentDir, packageBinaryFilePath)
+	totalPackagePath, err := srcpath.RelativeToSrc(totalPackageFilePath)
+	if err != nil {
+		return list, fmt.Errorf("Expected package should be located in GOPATH/src: %+q", err)
+	}
 
-			// Retrieve function list.
+	var fnPkg internal.PackageFunctions
+	fnPkg.Desc = binaryDesc
+	fnPkg.Name = pkgItem.Name
+	fnPkg.Path = pkgItem.Path
+	fnPkg.BinaryName = binaryName
+	fnPkg.FilePath = pkgItem.FilePath
+	fnPkg.Hash = string(pkgHash)
+
+	for _, declr := range pkgItem.Packages {
+		// Retrieve function list if we are not to ingore file declr.
+		if !declr.HasAnnotation("@shogunIgnoreFunctions") {
 			fnsList, err := pullFunctionFromDeclr(pkgItem, &declr)
 			if err != nil {
 				return list, err
 			}
 
-			list.Functions = append(list.Functions, fnsList...)
-
-			source := strings.Replace(declr.Source, strings.Join(declr.Comments, "\n"), "", -1)
-			packageIndex := strings.Index(source, "package")
-			packagePart := packageReg.FindString(source)
-
-			source = source[packageIndex:]
-			source = strings.TrimSpace(strings.Replace(source, packagePart, "", 1))
-
-			list.List = append(list.List, gen.WriteDirective{
-				FileName: filepath.Base(declr.FilePath),
-				Dir:      packageBinaryFilePath,
-				Writer: gen.SourceTextWithName(
-					"shogun:src-pkg-content",
-					string(templates.Must("shogun-src-pkg-content.tml")),
-					template.FuncMap{},
-					struct {
-						Source string
-					}{
-						Source: source,
-					},
-				),
-			})
+			fnPkg.List = append(fnPkg.List, fnsList...)
 		}
 
-		list.PkgPath = packageBinaryPath
-		list.Packages[binaryName] = totalPackagePath
-		list.PackagesPaths[binaryName] = totalPackageFilePath
-		list.BinaryPaths[pkgItem.FilePath] = binaryName
+		source := strings.Replace(declr.Source, strings.Join(declr.Comments, "\n"), "", -1)
+		packageIndex := strings.Index(source, "package")
+		packagePart := packageReg.FindString(source)
+
+		source = source[packageIndex:]
+		source = strings.TrimSpace(strings.Replace(source, packagePart, "", 1))
 
 		list.List = append(list.List, gen.WriteDirective{
-			FileName: fmt.Sprintf("pkg_%s.go", binaryFileName(binaryName)),
+			FileName: filepath.Base(declr.FilePath),
 			Dir:      packageBinaryFilePath,
 			Writer: gen.SourceTextWithName(
-				"shogun:src-pkg",
-				string(templates.Must("shogun-src-pkg.tml")),
+				"shogun:src-pkg-content",
+				string(templates.Must("shogun-src-pkg-content.tml")),
 				template.FuncMap{},
 				struct {
-					BinaryName string
-					Functions  []internal.Function
+					Source string
 				}{
-					BinaryName: binaryName,
-					Functions:  list.Functions,
+					Source: source,
 				},
 			),
-		})
-
-		list.List = append(list.List, gen.WriteDirective{
-			FileName: ".hashfile",
-			Dir:      packageBinaryPath,
-			Writer: gen.SourceTextWithName(
-				"shogun:src-pkg-hash",
-				string(templates.Must("shogun-src-pkg-hash.tml")),
-				template.FuncMap{},
-				struct {
-					Hash string
-				}{
-					Hash: string(hash),
-				},
-			),
-		})
-
-		list.List = append(list.List, gen.WriteDirective{
-			FileName: "main.go",
-			Dir:      packageBinaryPath,
-			Writer: gen.SourceTextWithName(
-				"shogun:src-pkg-main",
-				string(templates.Must("shogun-src-pkg-main.tml")),
-				template.FuncMap{},
-				struct {
-					BuildList
-					HelpFormat  string
-					BinaryName  string
-					MainPackage string
-				}{
-					BuildList:   list,
-					BinaryName:  binaryName,
-					MainPackage: totalPackagePath,
-					HelpFormat:  string(templates.Must("shogun-src-pkg-help-format.tml")),
-				},
-			),
-			After: func() error {
-				if skipBuild {
-					return nil
-				}
-
-				fmt.Printf("----------------------------------------\n")
-				fmt.Printf("Building binary for shogunate: %q\n", binaryName)
-
-				binCmd := exec.New(exec.Async(),
-					exec.Command("go build -x -o %s %s",
-						filepath.Join(binaryPath, binaryExeName),
-						filepath.Join(packageBinaryPath, "main.go"),
-					),
-				)
-
-				if err := binCmd.Exec(context.Background(), events); err != nil {
-					fmt.Printf("Building binary for shogun %q failed\n", binaryName)
-					return err
-				}
-
-				fmt.Printf("Built binary for shogun %q into %q\n", binaryName, binaryPath)
-
-				fmt.Printf("Cleaning up shogun binary build files... %q\n", binaryName)
-				if err := os.RemoveAll(filepath.Join(dir, packageBinaryPath)); err != nil {
-					fmt.Printf("Failed to properly cleanup build files %q\n\n", binaryName)
-					return err
-				}
-
-				fmt.Printf("Shogun %q build ready\n\n", binaryName)
-				return nil
-			},
 		})
 	}
+
+	list.Hash = string(pkgHash)
+	list.Functions = append(list.Functions, fnPkg)
+	list.PkgPath = packageBinaryPath
+	list.Packages[binaryName] = totalPackagePath
+	list.PackagesPaths[binaryName] = totalPackageFilePath
+	list.BinaryPaths[pkgItem.FilePath] = binaryName
+
+	list.List = append(list.List, gen.WriteDirective{
+		FileName: fmt.Sprintf("pkg_%s.go", binaryFileName(binaryName)),
+		Dir:      packageBinaryFilePath,
+		Writer: gen.SourceTextWithName(
+			"shogun:src-pkg",
+			string(templates.Must("shogun-src-pkg.tml")),
+			template.FuncMap{},
+			struct {
+				BinaryName string
+				Functions  []internal.PackageFunctions
+			}{
+				BinaryName: binaryName,
+				Functions:  list.Functions,
+			},
+		),
+	})
+
+	list.List = append(list.List, gen.WriteDirective{
+		FileName: ".hashfile",
+		Dir:      packageBinaryPath,
+		Writer: gen.SourceTextWithName(
+			"shogun:src-pkg-hash",
+			string(templates.Must("shogun-src-pkg-hash.tml")),
+			template.FuncMap{},
+			struct {
+				Hash string
+			}{
+				Hash: string(pkgHash),
+			},
+		),
+	})
+
+	list.List = append(list.List, gen.WriteDirective{
+		FileName: "main.go",
+		Dir:      packageBinaryPath,
+		Writer: gen.SourceTextWithName(
+			"shogun:src-pkg-main",
+			string(templates.Must("shogun-src-pkg-main.tml")),
+			template.FuncMap{},
+			struct {
+				BuildList
+				HelpFormat  string
+				BinaryName  string
+				MainPackage string
+			}{
+				BuildList:   list,
+				BinaryName:  binaryName,
+				MainPackage: totalPackagePath,
+				HelpFormat:  string(templates.Must("shogun-src-pkg-help-format.tml")),
+			},
+		),
+		After: func() error {
+			if skipBuild {
+				return nil
+			}
+
+			fmt.Printf("----------------------------------------\n")
+			fmt.Printf("Building binary for shogunate: %q\n", binaryName)
+
+			binCmd := exec.New(exec.Async(),
+				exec.Command("go build -x -o %s %s",
+					filepath.Join(binaryPath, binaryExeName),
+					filepath.Join(packageBinaryPath, "main.go"),
+				),
+			)
+
+			if err := binCmd.Exec(context.Background(), events); err != nil {
+				fmt.Printf("Building binary for shogun %q failed\n", binaryName)
+				return err
+			}
+
+			fmt.Printf("Built binary for shogun %q into %q\n", binaryName, binaryPath)
+
+			fmt.Printf("Cleaning up shogun binary build files... %q\n", binaryName)
+			if err := os.RemoveAll(filepath.Join(dir, packageBinaryPath)); err != nil {
+				fmt.Printf("Failed to properly cleanup build files %q\n\n", binaryName)
+				return err
+			}
+
+			fmt.Printf("Shogun %q build ready\n\n", binaryName)
+			return nil
+		},
+	})
 
 	return list, nil
 }

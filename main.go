@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"runtime"
+	"strings"
 	"text/template"
 
 	"github.com/fatih/color"
@@ -138,18 +139,11 @@ func addAction(c *cli.Context) error {
 		return errors.New("You are required to supply name of file without extension .eg kodachi-task")
 	}
 
-	packageName := shogunateDirName
-	toDirName := c.String("dirName")
+	var packageName string
 
-	if toDirName != "" {
-		packageName = toDirName
-	}
-
-	packageDir := filepath.Join(shogunateDirName, toDirName)
-
-	if !hasDir(shogunateDirName) && toDirName == "" {
-		packageName = "main"
-		packageDir = ""
+	packageDir := c.String("dirName")
+	if packageDir == "" {
+		packageName = strings.ToLower(filepath.Base(packageDir))
 	}
 
 	var directives []gen.WriteDirective
@@ -287,7 +281,18 @@ func listAction(c *cli.Context) error {
 		return err
 	}
 
-	_ = functions
+	result := gen.SourceTextWithName(
+		"shogun-pkg-list",
+		string(templates.Must("shogun-pkg-list.tml")),
+		template.FuncMap{},
+		functions,
+	)
+
+	_, err = result.WriteTo(os.Stdout)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 

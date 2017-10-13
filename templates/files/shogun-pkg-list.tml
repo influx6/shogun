@@ -1,0 +1,12 @@
+Shogunate {{quote .Main.Name}} below are you katans:
+⡿ {{ $.Main.Name }} {{ $.Main.Path }} {{ $.Main.Hash }}
+
+{{ range $index, $elem := .Main.List}}
+⡿ {{ $elem.Name }}
+{{ end }}
+
+Kodachi subcommands:
+
+{{ range $name, $elem := .Subs}}
+⡿ {{ $name }}
+{{ end }}

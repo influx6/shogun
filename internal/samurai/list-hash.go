@@ -6,6 +6,7 @@ import (
 	"github.com/influx6/faux/metrics"
 	"github.com/influx6/faux/vfiles"
 	"github.com/influx6/gobuild/build"
+	"github.com/influx6/gobuild/srcpath"
 	"github.com/influx6/moz/ast"
 )
 
@@ -42,6 +43,10 @@ func ListPackageHash(vlog, events metrics.Metrics, targetDir string, ctx build.C
 
 		res, err2 := HashPackages(vlog, events, abs, ctx)
 		if err2 != nil {
+			if err2 == ErrSkipDir {
+				return nil
+			}
+
 			return err2
 		}
 
@@ -63,6 +68,7 @@ type HashList struct {
 	Path     string            `json:"path"`
 	RelPath  string            `json:"relpath,omitempty"`
 	Hash     string            `json:"hash"`
+	Package  string            `json:"package"`
 	Packages map[string]string `json:"packages"`
 }
 
@@ -72,30 +78,35 @@ func HashPackages(vlog, events metrics.Metrics, dir string, ctx build.Context) (
 	var pkgFuncs HashList
 	pkgFuncs.Path = dir
 	pkgFuncs.Packages = make(map[string]string)
+	pkgFuncs.Package, _ = srcpath.RelativeToSrc(dir)
 
 	pkgs, err := ast.FilteredPackageWithBuildCtx(vlog, dir, ctx)
 	if err != nil {
 		if _, ok := err.(*build.NoGoError); ok {
-			return pkgFuncs, nil
+			return pkgFuncs, ErrSkipDir
 		}
 
 		events.Emit(metrics.Error(err).With("dir", dir))
 		return pkgFuncs, err
 	}
 
-	var hash []byte
-
-	for _, pkgItem := range pkgs {
-		pkgHash, err := generateHash(pkgItem.Files)
-		if err != nil {
-			return pkgFuncs, err
-		}
-
-		pkgFuncs.Packages[pkgItem.Path] = pkgHash
-		hash = append(hash, []byte(pkgHash)...)
+	if len(pkgs) == 0 {
+		return pkgFuncs, ErrSkipDir
 	}
 
-	pkgFuncs.Hash = string(hash)
+	pkgItem := pkgs[0]
+	if pkgItem.HasAnnotation("@shogunIgnore") {
+		return pkgFuncs, ErrSkipDir
+	}
+
+	pkgHash, err := generateHash(pkgItem.Files)
+	if err != nil {
+		return pkgFuncs, err
+	}
+
+	pkgFuncs.Packages[pkgItem.Path] = pkgHash
+
+	pkgFuncs.Hash = string(pkgHash)
 
 	return pkgFuncs, nil
 }

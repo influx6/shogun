@@ -1,14 +1,22 @@
 package samurai
 
 import (
+	"errors"
 	"go/doc"
 	"os"
+	"strings"
 
 	"github.com/influx6/faux/metrics"
 	"github.com/influx6/faux/vfiles"
 	"github.com/influx6/gobuild/build"
+	"github.com/influx6/gobuild/srcpath"
 	"github.com/influx6/moz/ast"
 	"github.com/influx6/shogun/internal"
+)
+
+// errors.
+var (
+	ErrSkipDir = errors.New("Directory does not match build type, skip")
 )
 
 // FunctionList holds a list of functions from a main package and
@@ -40,6 +48,10 @@ func ListFunctions(vlog, events metrics.Metrics, targetDir string, ctx build.Con
 
 		res, err2 := ListFunctionsForDir(vlog, events, abs, ctx)
 		if err2 != nil {
+			if err2 == ErrSkipDir {
+				return nil
+			}
+
 			return err2
 		}
 
@@ -59,7 +71,14 @@ type PackageFunctionList struct {
 	Path    string
 	RelPath string
 	Hash    string
-	List    []internal.Function
+	Package string
+	List    []internal.PackageFunctions
+}
+
+// IsValid returns true/false if this has any functions or is a valid function package.
+func (p PackageFunctionList) IsValid() bool {
+
+	return true
 }
 
 // ListFunctionsForDir iterates all directories and retrieves functon list of all declared functions
@@ -68,58 +87,83 @@ func ListFunctionsForDir(vlog, events metrics.Metrics, dir string, ctx build.Con
 	var pkgFuncs PackageFunctionList
 	pkgFuncs.Path = dir
 
+	pkgFuncs.Package, _ = srcpath.RelativeToSrc(dir)
+
 	pkgs, err := ast.FilteredPackageWithBuildCtx(vlog, dir, ctx)
 	if err != nil {
 		if _, ok := err.(*build.NoGoError); ok {
-			return pkgFuncs, nil
+			return pkgFuncs, ErrSkipDir
 		}
 
 		events.Emit(metrics.Error(err).With("dir", dir))
 		return pkgFuncs, err
 	}
 
-	var hash []byte
-
-	for _, pkgItem := range pkgs {
-		pkgHash, err := generateHash(pkgItem.Files)
-		if err != nil {
-			return pkgFuncs, err
-		}
-
-		hash = append(hash, []byte(pkgHash)...)
-
-		fns, err := pullFunctions(pkgItem)
-		if err != nil {
-			return pkgFuncs, err
-		}
-
-		pkgFuncs.List = append(pkgFuncs.List, fns...)
+	if len(pkgs) == 0 {
+		return pkgFuncs, ErrSkipDir
 	}
 
-	pkgFuncs.Hash = string(hash)
+	pkgItem := pkgs[0]
+	if pkgItem.HasAnnotation("@shogunIgnore") {
+		return pkgFuncs, ErrSkipDir
+	}
+
+	pkgHash, err := generateHash(pkgItem.Files)
+	if err != nil {
+		return pkgFuncs, err
+	}
+
+	fns, err := pullFunctions(pkgItem)
+	if err != nil {
+		return pkgFuncs, err
+	}
+
+	fns.Hash = pkgHash
+	pkgFuncs.List = append(pkgFuncs.List, fns)
 
 	return pkgFuncs, nil
 }
 
-func pullFunctions(pkg ast.Package) ([]internal.Function, error) {
-	var list []internal.Function
+func pullFunctions(pkg ast.Package) (internal.PackageFunctions, error) {
+	var fnPkg internal.PackageFunctions
+	fnPkg.Name = pkg.Name
+	fnPkg.Path = pkg.Path
+	fnPkg.FilePath = pkg.FilePath
+
+	if annon, _, found := pkg.AnnotationFirstFor("@binaryName"); found {
+		desc := annon.Param("desc")
+		if !strings.HasSuffix(desc, ".") {
+			desc += "."
+		}
+
+		fnPkg.Desc = doc.Synopsis(desc)
+		fnPkg.BinaryName = annon.Param("name")
+	}
+
+	if fnPkg.BinaryName == "" {
+		fnPkg.BinaryName = pkg.Name
+	}
 
 	for _, declr := range pkg.Packages {
+		if declr.HasAnnotation("@shogunIgnoreFunctions") {
+			continue
+		}
+
 		for _, function := range declr.Functions {
 			fn, ignore, err := pullFunction(&function, &declr)
 			if err != nil {
-				return list, err
+				return fnPkg, err
 			}
 
 			if ignore {
 				continue
 			}
 
-			list = append(list, fn)
+			fnPkg.List = append(fnPkg.List, fn)
 		}
 	}
 
-	return list, nil
+	return fnPkg, nil
 }
 
 // pullFunctionFromDeclr returns all function details within the giving PackageDeclaration.

@@ -1,3 +1,5 @@
+// Package types do something.
+// @shogunIgnore
 package types
 
 // IBlob ...
