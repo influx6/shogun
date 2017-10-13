@@ -14,6 +14,10 @@ import (
 	"github.com/influx6/shogun/internal"
 )
 
+const (
+	defaultDesc = "No description provided."
+)
+
 // errors.
 var (
 	ErrSkipDir = errors.New("Directory does not match build type, skip")
@@ -72,13 +76,9 @@ type PackageFunctionList struct {
 	RelPath string
 	Hash    string
 	Package string
+	Name    string
+	Desc    string
 	List    []internal.PackageFunctions
-}
-
-// IsValid returns true/false if this has any functions or is a valid function package.
-func (p PackageFunctionList) IsValid() bool {
-
-	return true
 }
 
 // ListFunctionsForDir iterates all directories and retrieves functon list of all declared functions
@@ -86,7 +86,6 @@ func (p PackageFunctionList) IsValid() bool {
 func ListFunctionsForDir(vlog, events metrics.Metrics, dir string, ctx build.Context) (PackageFunctionList, error) {
 	var pkgFuncs PackageFunctionList
 	pkgFuncs.Path = dir
-
 	pkgFuncs.Package, _ = srcpath.RelativeToSrc(dir)
 
 	pkgs, err := ast.FilteredPackageWithBuildCtx(vlog, dir, ctx)
@@ -113,6 +112,29 @@ func ListFunctionsForDir(vlog, events metrics.Metrics, dir string, ctx build.Con
 		return pkgFuncs, err
 	}
 
+	binaryName := pkgItem.Name
+
+	var binaryDesc string
+	if binAnnon, _, ok := pkgItem.AnnotationFirstFor("@binaryName"); ok {
+		binaryName = strings.ToLower(binAnnon.Param("name"))
+		if binaryName == "" {
+			binaryName = pkgItem.Name
+		}
+
+		desc := binAnnon.Param("desc")
+		if desc != "" && !strings.HasSuffix(desc, ".") {
+			desc += "."
+			binaryDesc = doc.Synopsis(desc)
+		}
+	}
+
+	if binaryDesc == "" {
+		binaryDesc = haiku()
+	}
+
+	pkgFuncs.Name = binaryName
+	pkgFuncs.Desc = binaryDesc
+
 	fns, err := pullFunctions(pkgItem)
 	if err != nil {
 		return pkgFuncs, err
@@ -132,7 +154,11 @@ func pullFunctions(pkg ast.Package) (internal.PackageFunctions, error) {
 
 	if annon, _, found := pkg.AnnotationFirstFor("@binaryName"); found {
 		desc := annon.Param("desc")
-		if !strings.HasSuffix(desc, ".") {
+		if desc == "" {
+			desc = haiku()
+		}
+
+		if desc != "" && !strings.HasSuffix(desc, ".") {
 			desc += "."
 		}
 
@@ -162,6 +188,8 @@ func pullFunctions(pkg ast.Package) (internal.PackageFunctions, error) {
 			fnPkg.List = append(fnPkg.List, fn)
 		}
 	}
+
+	fnPkg.MaxNameLen = maxName(fnPkg)
 
 	return fnPkg, nil
 }
@@ -263,6 +291,14 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 	fn.PackageFileName = function.File
 	fn.Description = function.Comments
 	fn.Synopses = doc.Synopsis(function.Comments)
+
+	if fn.Description == "" {
+		fn.Description = defaultDesc
+	}
+
+	if fn.Synopses == "" {
+		fn.Synopses = defaultDesc
+	}
 
 	if depends, ok := function.GetAnnotation("@depends"); ok {
 		fn.Depends = append(fn.Depends, depends.Arguments...)
@@ -368,4 +404,17 @@ func getContextState(arg ast.ArgType) int {
 	}
 
 	return internal.UseUnknownContext
+}
+
+// maxName returns name of longest function.
+func maxName(pn internal.PackageFunctions) int {
+	curr := -1
+	for _, fn := range pn.List {
+		if curr < len(fn.Name) {
+			curr = len(fn.Name)
+			continue
+		}
+	}
+
+	return curr
 }

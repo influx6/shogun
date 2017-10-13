@@ -132,7 +132,11 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 		binaryName = strings.ToLower(binAnnons[0].Param("name"))
 
 		desc := binAnnons[0].Param("desc")
-		if !strings.HasSuffix(desc, ".") {
+		if desc == "" {
+			desc = haiku()
+		}
+
+		if desc != "" && !strings.HasSuffix(desc, ".") {
 			desc += "."
 		}
 
@@ -196,8 +200,10 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 		})
 	}
 
-	list.Hash = string(pkgHash)
+	fnPkg.MaxNameLen = maxName(fnPkg)
 	list.Functions = append(list.Functions, fnPkg)
+
+	list.Hash = string(pkgHash)
 	list.PkgPath = packageBinaryPath
 	list.Packages[binaryName] = totalPackagePath
 	list.PackagesPaths[binaryName] = totalPackageFilePath

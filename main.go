@@ -29,12 +29,10 @@ import (
 
 // vars
 var (
-	Version          = "0.1"
-	nolog            = metrics.New()
+	Version          = "0.0.1"
 	shogunateDirName = "katanas"
 	ignoreAddition   = ".shogun"
 	goosRuntime      = runtime.GOOS
-	events           = metrics.New(custom.StackDisplay(os.Stdout))
 	packageReg       = regexp.MustCompile(`package \w+`)
 
 	helpTemplate = `NAME:
@@ -61,16 +59,32 @@ FLAGS:
 
 func main() {
 	app := cli.NewApp()
+	app.Version = Version
 	app.Name = "Shogun"
 	app.Author = "Ewetumo Alexander"
 	app.Email = "trinoxf@gmail.com"
 	app.Usage = "shogun {{command}}"
-	app.Flags = []cli.Flag{}
-	app.Description = "Shogun: Become one with your katana functions"
+	app.Description = "Become one with your functions"
 	app.CustomAppHelpTemplate = helpTemplate
 	app.Action = mainAction
 
+	app.Flags = []cli.Flag{}
+
 	app.Commands = []cli.Command{
+		{
+			Name:   "add",
+			Action: addAction,
+			Flags: []cli.Flag{
+				cli.StringFlag{
+					Name:  "dn,dirName",
+					Usage: "-dirName=bob-build",
+				},
+				cli.BoolFlag{
+					Name:  "v,verbose",
+					Usage: "-verbose to show hidden logs and operations",
+				},
+			},
+		},
 		{
 			Name:   "init",
 			Action: initAction,
@@ -83,6 +97,10 @@ func main() {
 					Name:  "nopkg",
 					Usage: "-nopkg=true",
 				},
+				cli.BoolFlag{
+					Name:  "v,verbose",
+					Usage: "-verbose to show hidden logs and operations",
+				},
 			},
 		},
 		{
@@ -93,15 +111,9 @@ func main() {
 					Name:  "d,dir",
 					Usage: "-dir=./example",
 				},
-			},
-		},
-		{
-			Name:   "add",
-			Action: addAction,
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "dn,dirName",
-					Usage: "-dirName=bob-build",
+				cli.BoolFlag{
+					Name:  "v,verbose",
+					Usage: "-verbose to show hidden logs and operations",
 				},
 			},
 		},
@@ -121,6 +133,10 @@ func main() {
 				cli.BoolFlag{
 					Name:  "skip,skipbuild",
 					Usage: "-skip=true to only build binary packages without generating binaries",
+				},
+				cli.BoolFlag{
+					Name:  "v,verbose",
+					Usage: "-verbose to show hidden logs and operations",
 				},
 			},
 		},
@@ -180,6 +196,12 @@ func addAction(c *cli.Context) error {
 }
 
 func initAction(c *cli.Context) error {
+	events := metrics.New()
+
+	if c.Bool("verbose") {
+		events = metrics.New(custom.StackDisplay(os.Stdout))
+	}
+
 	currentDir, err := os.Getwd()
 	if err != nil {
 		events.Emit(metrics.Error(err).With("dir", currentDir))
@@ -264,6 +286,12 @@ func mainAction(c *cli.Context) error {
 }
 
 func listAction(c *cli.Context) error {
+	events := metrics.New()
+
+	if c.Bool("verbose") {
+		events = metrics.New(custom.StackDisplay(os.Stdout))
+	}
+
 	currentDir, err := os.Getwd()
 	if err != nil {
 		events.Emit(metrics.Errorf("Failed to read current directory: %q", err))
@@ -275,10 +303,10 @@ func listAction(c *cli.Context) error {
 	ctx.RequiredTags = append(ctx.RequiredTags, "shogun")
 
 	// Build shogunate directory itself first.
-	functions, err := samurai.ListFunctions(nolog, events, filepath.Join(currentDir, c.String("dir")), ctx)
+	functions, err := samurai.ListFunctions(events, events, filepath.Join(currentDir, c.String("dir")), ctx)
 	if err != nil {
 		events.Emit(metrics.Errorf("Failed to generate function list : %+q", err))
-		return err
+		return fmt.Errorf("Not a shogun directory or contains no shogun files: %+q", err)
 	}
 
 	result := gen.SourceTextWithName(
@@ -297,6 +325,12 @@ func listAction(c *cli.Context) error {
 }
 
 func buildAction(c *cli.Context) error {
+	events := metrics.New()
+
+	if c.Bool("verbose") {
+		events = metrics.New(custom.StackDisplay(os.Stdout))
+	}
+
 	skipBuild := c.Bool("skipbuild")
 	tgDir := c.String("dir")
 
@@ -320,14 +354,14 @@ func buildAction(c *cli.Context) error {
 	ctx.RequiredTags = append(ctx.RequiredTags, "shogun")
 
 	// Build hash list for directories.
-	hashList, err := samurai.ListPackageHash(nolog, events, targetDir, ctx)
+	hashList, err := samurai.ListPackageHash(events, events, targetDir, ctx)
 	if err != nil {
 		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
 		return err
 	}
 
 	// Build directories for commands.
-	directive, err := samurai.BuildPackage(nolog, events, targetDir, cmdDir, currentDir, binaryPath, skipBuild, ctx)
+	directive, err := samurai.BuildPackage(events, events, targetDir, cmdDir, currentDir, binaryPath, skipBuild, ctx)
 	if err != nil {
 		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
 		return err

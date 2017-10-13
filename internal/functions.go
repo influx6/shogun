@@ -1,5 +1,13 @@
 package internal
 
+import (
+	"strings"
+)
+
+const (
+	spaceLen = 7
+)
+
 // const for return state.
 const (
 	NoReturn = iota << 10
@@ -67,5 +75,37 @@ type PackageFunctions struct {
 	Desc       string
 	FilePath   string
 	BinaryName string
+	MaxNameLen int
 	List       []Function
+}
+
+// SpaceFor returns space value for a giving name.
+func (pn PackageFunctions) SpaceFor(name string) string {
+	nmLength := len(name)
+
+	if nmLength == pn.MaxNameLen {
+		return printSpaceLine(spaceLen)
+	}
+
+	if nmLength < pn.MaxNameLen {
+		diff := pn.MaxNameLen - nmLength
+		return printSpaceLine(spaceLen + diff)
+	}
+
+	newLen := spaceLen - (pn.MaxNameLen - nmLength)
+	if newLen < -1 {
+		newLen *= -1
+	}
+
+	return printSpaceLine(newLen)
+}
+
+func printSpaceLine(length int) string {
+	var lines []string
+
+	for i := 0; i < length; i++ {
+		lines = append(lines, " ")
+	}
+
+	return strings.Join(lines, "")
 }

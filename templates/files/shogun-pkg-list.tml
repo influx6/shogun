@@ -1,12 +1,14 @@
-Shogunate {{quote .Main.Name}} below are you katans:
-⡿ {{ $.Main.Name }} {{ $.Main.Path }} {{ $.Main.Hash }}
+Shogun clan {{ quote .Main.Package}}
 
-{{ range $index, $elem := .Main.List}}
-⡿ {{ $elem.Name }}
-{{ end }}
+⡿ SAMURAI {{ quote .Main.Name }}        {{.Main.Desc}}
 
-Kodachi subcommands:
+KATANA COMMANDS:
+{{ range $index, $elem := .Main.List}}{{ range $elem.List}}
+  ⠙ {{ .Name }}{{$elem.SpaceFor .Name}}{{.Synopses}}
+{{ end }} {{ end }}
+
+OTHER SAMURAI SUBCOMMANDS:
 
 {{ range $name, $elem := .Subs}}
-⡿ {{ $name }}
+⡿ {{ $elem.Name }}              {{$elem.Desc}}
 {{ end }}
