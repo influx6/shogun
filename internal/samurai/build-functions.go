@@ -16,6 +16,7 @@ import (
 	"text/template"
 
 	"github.com/influx6/faux/exec"
+	"github.com/influx6/faux/fmtwriter"
 	"github.com/influx6/faux/metrics"
 	"github.com/influx6/faux/vfiles"
 	"github.com/influx6/gobuild/build"
@@ -40,23 +41,16 @@ type BuildFunctions struct {
 }
 
 // BuildPackage builds a shogun binarie commandline files for giving directory and 1 level directory.
-func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdDir string, cuDir string, binaryPath string, skipBuild bool, ctx build.Context) (BuildFunctions, error) {
+func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdDir string, cuDir string, binaryPath string, skipBuild bool, dontCombineRoot bool, ctx build.Context) (BuildFunctions, error) {
 	var list BuildFunctions
 	list.Subs = make(map[string]BuildList)
-
-	var err error
-	list.Main, err = BuildPackageForDir(vlog, events, dir, cmdDir, cuDir, binaryPath, skipBuild, ctx)
-	if err != nil {
-		events.Emit(metrics.Error(err).With("dir", dir).With("binary_path", binaryPath))
-		return list, err
-	}
 
 	if err := vfiles.WalkDirSurface(dir, func(rel string, abs string, info os.FileInfo) error {
 		if !info.IsDir() {
 			return nil
 		}
 
-		res, err2 := BuildPackageForDir(vlog, events, abs, cmdDir, cuDir, binaryPath, skipBuild, ctx)
+		res, err2 := BuildPackageForDir(vlog, events, abs, cmdDir, cuDir, binaryPath, skipBuild, map[string]BuildList{}, ctx)
 		if err2 != nil {
 			if err2 == ErrSkipDir {
 				return nil
@@ -74,30 +68,51 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdD
 		return list, err
 	}
 
+	var combined map[string]BuildList
+
+	if !dontCombineRoot {
+		combined = list.Subs
+	}
+
+	var err error
+	list.Main, err = BuildPackageForDir(vlog, events, dir, cmdDir, cuDir, binaryPath, skipBuild, combined, ctx)
+	if err != nil {
+		events.Emit(metrics.Error(err).With("dir", dir).With("binary_path", binaryPath))
+		return list, err
+	}
+
 	return list, nil
 }
 
 // BuildList holds a procssed package list of write directives.
 type BuildList struct {
-	Hash          string
-	Path          string
-	RelPath       string
-	PkgPath       string
-	Packages      map[string]string
-	PackagesPaths map[string]string
-	BinaryPaths   map[string]string
-	List          []gen.WriteDirective
-	Functions     []internal.PackageFunctions
+	Hash            string
+	Path            string
+	RelPath         string
+	FromPackage     string
+	FromPackageName string
+	PkgPath         string
+	BinaryName      string
+	Desc            string
+	ExecBinaryName  string
+	Packages        map[string]string
+	PackagesPaths   map[string]string
+	BinaryPaths     map[string]string
+	List            []gen.WriteDirective
+	Functions       []internal.PackageFunctions
 }
 
 // BuildPackageForDir generates needed package files for creating new function based executable binaries.
-func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string, cmd string, currentDir string, binaryPath string, skipBuild bool, ctx build.Context) (BuildList, error) {
+func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string, cmd string, currentDir string, binaryPath string, skipBuild bool, subs map[string]BuildList, ctx build.Context) (BuildList, error) {
+	if subs == nil {
+		subs = make(map[string]BuildList)
+	}
+
 	var list BuildList
 	list.Path = dir
 	list.Packages = make(map[string]string)
 	list.PackagesPaths = make(map[string]string)
 	list.BinaryPaths = make(map[string]string)
-	// list.Package, _ = srcpath.RelativeToSrc(dir)
 
 	pkgs, err := ast.FilteredPackageWithBuildCtx(vlog, dir, ctx)
 	if err != nil {
@@ -132,23 +147,29 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 		binaryName = strings.ToLower(binAnnons[0].Param("name"))
 
 		desc := binAnnons[0].Param("desc")
-		if desc == "" {
-			desc = haiku()
-		}
-
 		if desc != "" && !strings.HasSuffix(desc, ".") {
 			desc += "."
+			binaryDesc = doc.Synopsis(desc)
 		}
 
-		binaryDesc = doc.Synopsis(desc)
 	} else {
 		binaryName = pkgItem.Name
+	}
+
+	if binaryDesc == "" {
+		binaryDesc = haiku()
 	}
 
 	binaryExeName = binaryName
 	if goosRuntime == "windows" {
 		binaryExeName = fmt.Sprintf("%s.exec", binaryName)
 	}
+
+	list.Desc = binaryDesc
+	list.BinaryName = binaryName
+	list.ExecBinaryName = binaryExeName
+	list.FromPackage = pkgItem.Path
+	list.FromPackageName = pkgItem.Name
 
 	packageBinaryPath := filepath.Join(cmd, binaryName)
 	packageBinaryFilePath := filepath.Join(packageBinaryPath, "pkg")
@@ -218,10 +239,12 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 			template.FuncMap{},
 			struct {
 				BinaryName string
-				Functions  []internal.PackageFunctions
+				Subs       map[string]BuildList
+				Main       BuildList
 			}{
 				BinaryName: binaryName,
-				Functions:  list.Functions,
+				Main:       list,
+				Subs:       subs,
 			},
 		),
 	})
@@ -241,25 +264,46 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 		),
 	})
 
+	var helpFormat bytes.Buffer
+
+	formatMaker := gen.SourceTextWithName(
+		"shogun-pkg-inbin-list",
+		string(templates.Must("shogun-pkg-inbin-list.tml")),
+		template.FuncMap{},
+		struct {
+			Main BuildList
+			Subs map[string]BuildList
+		}{
+			Main: list,
+			Subs: subs,
+		},
+	)
+
+	if _, err := formatMaker.WriteTo(&helpFormat); err != nil {
+		return list, fmt.Errorf("Failed to generate binary %q help message: %+q", binaryName, err)
+	}
+
 	list.List = append(list.List, gen.WriteDirective{
 		FileName: "main.go",
 		Dir:      packageBinaryPath,
-		Writer: gen.SourceTextWithName(
+		Writer: fmtwriter.NewWith(vlog, gen.SourceTextWithName(
 			"shogun:src-pkg-main",
 			string(templates.Must("shogun-src-pkg-main.tml")),
 			template.FuncMap{},
 			struct {
-				BuildList
+				Main        BuildList
 				HelpFormat  string
 				BinaryName  string
 				MainPackage string
+				Subs        map[string]BuildList
 			}{
-				BuildList:   list,
+				Subs:        subs,
+				Main:        list,
 				BinaryName:  binaryName,
 				MainPackage: totalPackagePath,
-				HelpFormat:  string(templates.Must("shogun-src-pkg-help-format.tml")),
+				HelpFormat:  helpFormat.String(),
 			},
-		),
+		), false, true),
 		After: func() error {
 			if skipBuild {
 				return nil

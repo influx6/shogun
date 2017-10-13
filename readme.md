@@ -40,6 +40,7 @@ possible the peculiar style of the source.
 
 In shogun, you can tag a function as the default entry level function by using the  `@default` annotation.
 
+
 ## Functions
 
 Shogun focuses on the execution of functions, that supports a limited but flexible

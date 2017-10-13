@@ -7,7 +7,7 @@ KATANA COMMANDS:
   ⠙ {{ .Name }}{{$elem.SpaceFor .Name}}{{.Synopses}}
 {{ end }} {{ end }}
 
-OTHER SAMURAI SUBCOMMANDS:
+OTHER SAMURAI COMMANDS:
 
 {{ range $name, $elem := .Subs}}
 ⡿ {{ $elem.Name }}              {{$elem.Desc}}

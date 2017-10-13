@@ -1,0 +1,29 @@
+Shogun clan {{ quote .Main.FromPackage}}
+
+⡿ SAMURAI {{ quote .Main.BinaryName }}        {{.Main.Desc}}
+
+KATANA COMMANDS:
+{{ range $index, $elem := .Main.Functions}}{{ range $elem.List}}
+⠙ {{ .Name }}{{$elem.SpaceFor .Name}}{{.Synopses}}
+{{ end }} {{ end }}
+
+{{ if notequal (len .Subs) 0}}OTHER SAMURAI COMMANDS:
+{{ range $_, $elem := .Subs}}
+⡿ {{ $elem.BinaryName }}              {{$elem.Desc}}
+{{ end }}{{end}}
+HELP:
+To see more on each command:
+
+  help [commandName]
+
+To see more on each command with source and full description:
+
+  help -f -s [commandName]
+
+{{ if notequal (len .Subs) 0}}
+To see more on each subcommand commands:
+
+  help [subcommand] [commandName]
+
+  help -f -s [subcommand] [commandName]
+{{end}}

@@ -2,14 +2,21 @@
 
 package pkg
 
-// IgniteKatanas is used to execute a function.
-func IgniteKatana(function string) error {
+var (
+  subCommands = map[string]bool{
+{{ range $_, $sub := .Subs}}
+    {{ quote $sub.BinaryName}}: true,
+{{end}}
+  }
+)
 
+// MainShogunExecute executes necessary commands as needed from its arguments and
+// writes corresponding outputs to provided `ougoing` writeCloser.
+func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing io.WriteCloser) error {
   return nil
 }
 
-// ListKatanas is used to list all functions.
-func ListKatanas() error {
-
+// MainShogunHelp display help message for executable commands and subcommands.
+func MainShogunHelp(source bool, fulldesc bool, cmd string, args []string, incoming io.Reader, outgoing io.WriteCloser) error {
   return nil
 }

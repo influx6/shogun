@@ -4,6 +4,7 @@ package main
 
 import (
 	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -19,7 +20,6 @@ import (
 	"github.com/influx6/faux/metrics"
 	"github.com/influx6/faux/metrics/custom"
 	"github.com/influx6/gobuild/build"
-	"github.com/influx6/gobuild/srcpath"
 	"github.com/influx6/moz/ast"
 	"github.com/influx6/moz/gen"
 	"github.com/influx6/shogun/internal/samurai"
@@ -34,8 +34,8 @@ var (
 	ignoreAddition   = ".shogun"
 	goosRuntime      = runtime.GOOS
 	packageReg       = regexp.MustCompile(`package \w+`)
-
-	helpTemplate = `NAME:
+	binNameReg       = regexp.MustCompile("\\W+")
+	helpTemplate     = `NAME:
 {{.Name}} - {{.Usage}}
 
 VERSION:
@@ -77,25 +77,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "dn,dirName",
-					Usage: "-dirName=bob-build",
-				},
-				cli.BoolFlag{
-					Name:  "v,verbose",
-					Usage: "-verbose to show hidden logs and operations",
-				},
-			},
-		},
-		{
-			Name:   "init",
-			Action: initAction,
-			Flags: []cli.Flag{
-				cli.StringFlag{
-					Name:  "n,name",
-					Usage: "-name=bob-build",
-				},
-				cli.BoolFlag{
-					Name:  "nopkg",
-					Usage: "-nopkg=true",
+					Usage: "-dirName=bob-build set the name of directory and package",
 				},
 				cli.BoolFlag{
 					Name:  "v,verbose",
@@ -109,7 +91,7 @@ func main() {
 			Flags: []cli.Flag{
 				cli.StringFlag{
 					Name:  "d,dir",
-					Usage: "-dir=./example",
+					Usage: "-dir=./example to set directory to scan for functions",
 				},
 				cli.BoolFlag{
 					Name:  "v,verbose",
@@ -126,19 +108,33 @@ func main() {
 					Value: "",
 					Usage: "-dir=./katanas to build specific directory instead of root.",
 				},
+				cli.StringFlag{
+					Name:  "cmd,cmdDir",
+					Value: "",
+					Usage: "-cmd=./cmd to build CLI package files into relative directory.",
+				},
 				cli.BoolFlag{
-					Name:  "spkg,singlePkg",
-					Usage: "-singlePkg=true to only bundle seperate command binaries without combined binary",
+					Name:  "single,singlePkg",
+					Usage: "-singlePkg=true to only bundle seperate command binaries",
 				},
 				cli.BoolFlag{
 					Name:  "skip,skipbuild",
-					Usage: "-skip=true to only build binary packages without generating binaries",
+					Usage: "-skip to generate CLI package files without building binaries",
 				},
 				cli.BoolFlag{
 					Name:  "v,verbose",
 					Usage: "-verbose to show hidden logs and operations",
 				},
+				cli.BoolFlag{
+					Name:  "f,force",
+					Usage: "-f to force rebuild of binary",
+				},
 			},
+		},
+		{
+			Name:   "help",
+			Action: helpAction,
+			Flags:  []cli.Flag{},
 		},
 		{
 			Name:   "version",
@@ -152,14 +148,16 @@ func main() {
 
 func addAction(c *cli.Context) error {
 	if c.NArg() == 0 {
-		return errors.New("You are required to supply name of file without extension .eg kodachi-task")
+		return errors.New("You are required to supply spaced names of files .e.g signup.go signin.go run.go")
 	}
 
 	var packageName string
 
 	packageDir := c.String("dirName")
 	if packageDir == "" {
-		packageName = strings.ToLower(filepath.Base(packageDir))
+		packageName = "main"
+	} else {
+		packageName = toPackageName(packageDir)
 	}
 
 	var directives []gen.WriteDirective
@@ -170,6 +168,7 @@ func addAction(c *cli.Context) error {
 			continue
 		}
 
+		arg = strings.TrimSuffix(arg, filepath.Ext(arg))
 		fileName := fmt.Sprintf("%s.go", arg)
 
 		directives = append(directives, gen.WriteDirective{
@@ -195,93 +194,64 @@ func addAction(c *cli.Context) error {
 	return nil
 }
 
-func initAction(c *cli.Context) error {
+func helpAction(c *cli.Context) error {
+	if c.NArg() == 0 || c.Args().First() == "" {
+		return nil
+	}
+
 	events := metrics.New()
 
 	if c.Bool("verbose") {
 		events = metrics.New(custom.StackDisplay(os.Stdout))
 	}
 
-	currentDir, err := os.Getwd()
-	if err != nil {
-		events.Emit(metrics.Error(err).With("dir", currentDir))
-		return err
-	}
+	binaryPath := binPath()
 
-	sourceDir, err := srcpath.RelativeToSrc(currentDir)
-	if err != nil {
-		events.Emit(metrics.Errorf("Must be run within go src path: %+q", err).With("dir", currentDir))
-		return err
-	}
+	var response, responseErr bytes.Buffer
+	binCmd := exec.New(
+		exec.Async(),
+		exec.Command("%s/%s help %s", binaryPath, c.Args().First(), strings.Join(c.Args().Tail(), " ")),
+		exec.Output(&response),
+		exec.Err(&responseErr),
+		exec.Input(os.Stdout),
+	)
 
-	ctx := build.Default
-	pkg, err := ctx.ImportDir("./", build.FindOnly)
-	if err != nil {
-		return err
-	}
-
-	packageTemplate := "shogun-in-pkg.tml"
-
-	storeDir := shogunateDirName
-	packageName := shogunateDirName
-	if c.Bool("nopkg") {
-		storeDir = ""
-		packageName = "main"
-	}
-
-	pkgName := pkg.Name
-	if pkgName == "" {
-		pkgName = filepath.Base(sourceDir)
-	}
-
-	binaryName := c.String("name")
-	if binaryName == "" {
-		binaryName = fmt.Sprintf("%s_shogun", pkgName)
-	}
-
-	directives := []gen.WriteDirective{
-		{
-			Dir: filepath.Join(storeDir, "cmd"),
-		},
-		{
-			Dir:      storeDir,
-			FileName: "katana.go",
-			Writer: gen.SourceTextWith(
-				string(templates.Must(packageTemplate)),
-				template.FuncMap{},
-				struct {
-					Package    string
-					BinaryName string
-				}{
-					Package:    packageName,
-					BinaryName: binaryName,
-				},
-			),
-		},
-	}
-
-	if gerr := ast.SimpleWriteDirectives("./", false, directives...); gerr != nil {
-		events.Emit(metrics.Errorf("Failed to write changes to disk: %+q", gerr).With("dir", currentDir))
-		return err
-	}
-
-	if igerr := checkAndAddIgnore(currentDir); igerr != nil {
-		events.Emit(metrics.Errorf("Failed to add changes to .gitignore: %+q", igerr).With("dir", currentDir))
-		return igerr
+	if err := binCmd.Exec(context.Background(), events); err != nil {
+		events.Emit(metrics.Error(err))
+		return fmt.Errorf("Command Error: %+q", err)
 	}
 
 	return nil
 }
 
 func mainAction(c *cli.Context) error {
-	if c.NArg() == 0 {
+	if c.NArg() == 0 || c.Args().First() == "" {
+		fmt.Println("Nothing to do...")
 		return nil
 	}
 
-	var response, responseErr bytes.Buffer
-	lsCmd := exec.New(exec.Command(""), exec.Async(), exec.Output(&response), exec.Err(&responseErr))
+	events := metrics.New()
 
-	_ = lsCmd
+	if c.Bool("verbose") {
+		events = metrics.New(custom.StackDisplay(os.Stdout))
+	}
+
+	binaryPath := binPath()
+
+	var response, responseErr bytes.Buffer
+	binCmd := exec.New(
+		exec.Async(),
+		exec.Command("%s/%s %s", binaryPath, c.Args().First(), strings.Join(c.Args().Tail(), " ")),
+		exec.Output(&response),
+		exec.Err(&responseErr),
+		exec.Input(os.Stdout),
+	)
+
+	if err := binCmd.Exec(context.Background(), events); err != nil {
+		events.Emit(metrics.Error(err))
+		return fmt.Errorf("Command Error: %+q", err)
+	}
+
 	return nil
 }
 
@@ -332,7 +302,9 @@ func buildAction(c *cli.Context) error {
 	}
 
 	skipBuild := c.Bool("skipbuild")
+	forceBuild := c.Bool("force")
 	tgDir := c.String("dir")
+	cmdDir := c.String("cmdDir")
 
 	binaryPath := binPath()
 	currentDir, err := os.Getwd()
@@ -347,7 +319,10 @@ func buildAction(c *cli.Context) error {
 	}
 
 	targetDir := filepath.Join(currentDir, tgDir)
-	cmdDir := filepath.Join(".shogun", "cmd")
+
+	if cmdDir == "" {
+		cmdDir = filepath.Join(".shogun", "cmd")
+	}
 
 	ctx := build.Default
 	ctx.BuildTags = append(ctx.BuildTags, "shogun")
@@ -361,7 +336,7 @@ func buildAction(c *cli.Context) error {
 	}
 
 	// Build directories for commands.
-	directive, err := samurai.BuildPackage(events, events, targetDir, cmdDir, currentDir, binaryPath, skipBuild, ctx)
+	directive, err := samurai.BuildPackage(events, events, targetDir, cmdDir, currentDir, binaryPath, skipBuild, c.Bool("singlePkg"), ctx)
 	if err != nil {
 		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
 		return err
@@ -374,7 +349,7 @@ func buildAction(c *cli.Context) error {
 			hashFile := filepath.Join(currentDir, sub.PkgPath, ".hashfile")
 			prevHash, err := readFile(hashFile)
 
-			if err == nil && prevHash == hashData.Hash {
+			if err == nil && prevHash == hashData.Hash && !forceBuild {
 				continue
 			}
 		}
@@ -393,9 +368,11 @@ func buildAction(c *cli.Context) error {
 	}
 
 	// Validate hash of main cmd.
-	hashFile := filepath.Join(currentDir, directive.Main.PkgPath, ".hashfile")
-	if prevHash, err := readFile(hashFile); err == nil && prevHash == hashList.Main.Hash && !subUpdated {
-		return nil
+	if !forceBuild {
+		hashFile := filepath.Join(currentDir, directive.Main.PkgPath, ".hashfile")
+		if prevHash, err := readFile(hashFile); err == nil && prevHash == hashList.Main.Hash && !subUpdated {
+			return nil
+		}
 	}
 
 	if err := ast.SimpleWriteDirectives("./", true, directive.Main.List...); err != nil {
@@ -463,6 +440,10 @@ func hasFile(file string) bool {
 
 func versionAction(c *cli.Context) {
 	fmt.Println(color.BlueString(fmt.Sprintf("shogun %s %s/%s", Version, runtime.GOOS, runtime.GOARCH)))
+}
+
+func toPackageName(name string) string {
+	return strings.ToLower(binNameReg.ReplaceAllString(name, ""))
 }
 
 func binPath() string {
