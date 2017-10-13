@@ -4,23 +4,68 @@ package pkg
 
 import (
   "io"
+{{ range $_, $sub := .Subs}}
+  {{$sub.CleanBinaryName}} {{quote $sub.PkgPath}}
+{{end}}
 )
 
 var (
-  subCommands = map[string]bool{
-{{ range $_, $sub := .Subs}}
+  subCommands = map[string]bool{ {{ range $_, $sub := .Subs}}
     {{ quote $sub.BinaryName}}: true,
-{{end}}
-  }
+{{end}} }
 )
 
 // MainShogunExecute executes necessary commands as needed from its arguments and
 // writes corresponding outputs to provided `ougoing` writeCloser.
 func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing io.WriteCloser) error {
+  {{ if notequal (len .Subs) 0}}// If its a subcommand then let subcommand handle this.
+  if subCommands[cmd] {
+    var first string
+    var rest []string
+
+    if len(args) != 0 {
+      first = args[0]
+      rest = args[1:]
+    }
+
+    switch cmd {
+    {{ range $_, $sub := .Subs}}
+      case {{quote $sub.BinaryName}}:
+        return {{$sub.CleanBinaryName}}.MainShogunExecute(first, rest, incoming, outgoing)
+    {{end}}
+    }
+  }
+  {{end}}switch cmd {
+    {{ range $_, $elem := .Main.Functions }}{{range $elem.List}}
+      case {{quote .Name}}, {{quote .RealName}}:
+    {{end}}{{ end }}
+  }
   return nil
 }
 
 // MainShogunHelp display help message for executable commands and subcommands.
 func MainShogunHelp(source bool, fulldesc bool, cmd string, args []string, incoming io.Reader, outgoing io.WriteCloser) error {
+  {{ if notequal (len .Subs) 0}}// If its a subcommand then let subcommand handle this.
+  if subCommands[cmd] {
+    var first string
+    var rest []string
+
+    if len(args) != 0 {
+      first = args[0]
+      rest = args[1:]
+    }
+
+    switch cmd {
+    {{ range $_, $sub := .Subs}}
+      case {{quote $sub.BinaryName}}:
+        return {{$sub.CleanBinaryName}}.MainShogunHelp(source, fulldesc,first, rest, incoming, outgoing)
+    {{end}}
+    }
+  }
+  {{end}}switch cmd {
+    {{ range $_, $elem := .Main.Functions }}{{range $elem.List}}
+      case {{quote .Name}}, {{quote .RealName}}:
+    {{end}}{{ end }}
+  }
   return nil
 }

@@ -116,7 +116,7 @@ func ListFunctionsForDir(vlog, events metrics.Metrics, dir string, ctx build.Con
 
 	var binaryDesc string
 	if binAnnon, _, ok := pkgItem.AnnotationFirstFor("@binaryName"); ok {
-		binaryName = strings.ToLower(binAnnon.Param("name"))
+		binaryName = binAnnon.Param("name")
 		if binaryName == "" {
 			binaryName = pkgItem.Name
 		}

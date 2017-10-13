@@ -30,6 +30,7 @@ import (
 var (
 	ignoreAddition = ".shogun"
 	goosRuntime    = runtime.GOOS
+	binNameReg     = regexp.MustCompile("\\W+")
 	packageReg     = regexp.MustCompile(`package \w+`)
 )
 
@@ -92,12 +93,11 @@ type BuildList struct {
 	FromPackage     string
 	FromPackageName string
 	PkgPath         string
+	BasePkgPath     string
 	BinaryName      string
+	CleanBinaryName string
 	Desc            string
 	ExecBinaryName  string
-	Packages        map[string]string
-	PackagesPaths   map[string]string
-	BinaryPaths     map[string]string
 	List            []gen.WriteDirective
 	Functions       []internal.PackageFunctions
 }
@@ -110,9 +110,6 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 
 	var list BuildList
 	list.Path = dir
-	list.Packages = make(map[string]string)
-	list.PackagesPaths = make(map[string]string)
-	list.BinaryPaths = make(map[string]string)
 
 	pkgs, err := ast.FilteredPackageWithBuildCtx(vlog, dir, ctx)
 	if err != nil {
@@ -167,6 +164,7 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 
 	list.Desc = binaryDesc
 	list.BinaryName = binaryName
+	list.CleanBinaryName = toPackageName(binaryName)
 	list.ExecBinaryName = binaryExeName
 	list.FromPackage = pkgItem.Path
 	list.FromPackageName = pkgItem.Name
@@ -225,10 +223,8 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 	list.Functions = append(list.Functions, fnPkg)
 
 	list.Hash = string(pkgHash)
-	list.PkgPath = packageBinaryPath
-	list.Packages[binaryName] = totalPackagePath
-	list.PackagesPaths[binaryName] = totalPackageFilePath
-	list.BinaryPaths[pkgItem.FilePath] = binaryName
+	list.PkgPath = totalPackagePath
+	list.BasePkgPath = packageBinaryPath
 
 	list.List = append(list.List, gen.WriteDirective{
 		FileName: fmt.Sprintf("pkg_%s.go", binaryFileName(binaryName)),
@@ -305,7 +301,7 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 				HelpFormat:         helpFormat.String(),
 				CustomHelpTemplate: string(templates.Must("shogun-src-pkg-help-format.tml")),
 			},
-		), false, true),
+		), true, true),
 		After: func() error {
 			if skipBuild {
 				return nil
@@ -314,7 +310,10 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 			fmt.Printf("----------------------------------------\n")
 			fmt.Printf("Building binary for shogunate: %q\n", binaryName)
 
-			binCmd := exec.New(exec.Async(),
+			var resp bytes.Buffer
+			binCmd := exec.New(
+				exec.Async(),
+				exec.Err(&resp),
 				exec.Command("go build -x -o %s %s",
 					filepath.Join(binaryPath, binaryExeName),
 					filepath.Join(packageBinaryPath, "main.go"),
@@ -322,6 +321,7 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 			)
 
 			if err := binCmd.Exec(context.Background(), events); err != nil {
+				fmt.Println(resp.String())
 				fmt.Printf("Building binary for shogun %q failed\n", binaryName)
 				return err
 			}
@@ -340,6 +340,10 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 	})
 
 	return list, nil
+}
+
+func toPackageName(name string) string {
+	return strings.ToLower(binNameReg.ReplaceAllString(name, ""))
 }
 
 func binaryFileName(name string) string {
