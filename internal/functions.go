@@ -54,6 +54,7 @@ type Function struct {
 	Type            int
 	Return          int
 	Exported        bool
+	RealName        string
 	Name            string
 	From            string
 	Synopses        string

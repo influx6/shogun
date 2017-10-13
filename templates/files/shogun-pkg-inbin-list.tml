@@ -12,6 +12,7 @@ KATANA COMMANDS:
 ⡿ {{ $elem.BinaryName }}              {{$elem.Desc}}
 {{ end }}{{end}}
 HELP:
+
 To see more on each command:
 
   help [commandName]
@@ -20,10 +21,8 @@ To see more on each command with source and full description:
 
   help -f -s [commandName]
 
-{{ if notequal (len .Subs) 0}}
-To see more on each subcommand commands:
+{{ if notequal (len .Subs) 0}}To see more on each subcommand commands:
 
   help [subcommand] [commandName]
 
-  help -f -s [subcommand] [commandName]
-{{end}}
+  help -f -s [subcommand] [commandName]{{end}}

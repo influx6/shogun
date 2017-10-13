@@ -291,17 +291,19 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 			string(templates.Must("shogun-src-pkg-main.tml")),
 			template.FuncMap{},
 			struct {
-				Main        BuildList
-				HelpFormat  string
-				BinaryName  string
-				MainPackage string
-				Subs        map[string]BuildList
+				Main               BuildList
+				HelpFormat         string
+				CustomHelpTemplate string
+				BinaryName         string
+				MainPackage        string
+				Subs               map[string]BuildList
 			}{
-				Subs:        subs,
-				Main:        list,
-				BinaryName:  binaryName,
-				MainPackage: totalPackagePath,
-				HelpFormat:  helpFormat.String(),
+				Subs:               subs,
+				Main:               list,
+				BinaryName:         binaryName,
+				MainPackage:        totalPackagePath,
+				HelpFormat:         helpFormat.String(),
+				CustomHelpTemplate: string(templates.Must("shogun-src-pkg-help-format.tml")),
 			},
 		), false, true),
 		After: func() error {

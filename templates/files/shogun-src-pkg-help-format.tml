@@ -10,10 +10,9 @@ DESCRIPTION:
 USAGE:
 {{.Name}} {{if .Flags}}[flags] {{end}}command{{if .Flags}}{{end}} [arguments...]
 
-FLAGS:
-	{{range .Flags}}{{.}}
-	{{end}}{{end}}
-
 COMMANDS:
-	{{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
-	{{end}}{{if .Flags}}
+{{range .Commands}}{{join .Names ", "}}{{ "\t" }}{{.Usage}}
+{{end}}{{if .Flags}}
+FLAGS:
+{{range .Flags}}{{.}}
+{{end}}{{end}}

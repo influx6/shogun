@@ -280,13 +280,14 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 		return fn, true, nil
 	}
 
-	fn.Name = def.Name
+	fn.RealName = def.Name
 	fn.Imports = importList
 	fn.Type = argumentType
 	fn.Return = returnType
 	fn.Context = contextType
 	fn.Package = function.Package
 	fn.PackagePath = function.Path
+	fn.Name = strings.ToLower(def.Name)
 	fn.PackageFile = function.FilePath
 	fn.PackageFileName = function.File
 	fn.Description = function.Comments

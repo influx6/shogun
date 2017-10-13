@@ -68,8 +68,6 @@ func main() {
 	app.CustomAppHelpTemplate = helpTemplate
 	app.Action = mainAction
 
-	app.Flags = []cli.Flag{}
-
 	app.Commands = []cli.Command{
 		{
 			Name:   "add",
@@ -249,9 +247,10 @@ func mainAction(c *cli.Context) error {
 
 	if err := binCmd.Exec(context.Background(), events); err != nil {
 		events.Emit(metrics.Error(err))
-		return fmt.Errorf("Command Error: %+q", err)
+		return fmt.Errorf("Command Error: %+q\n %+s", err, responseErr.String())
 	}
 
+	fmt.Println(response.String())
 	return nil
 }
 
