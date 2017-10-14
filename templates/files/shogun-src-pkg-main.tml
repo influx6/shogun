@@ -70,11 +70,6 @@ func helpAction(c *cli.Context) error {
 }
 
 func mainAction(c *cli.Context) error {
-	if c.NArg() == 0 {
-		 fmt.Println(helpMessage)
-		 return nil
-	}
-
 	tm := makeDuration(c.String("timeout"), 0)
 	if err := pkg.MainShogunExecute(
 		c.Args().First(),

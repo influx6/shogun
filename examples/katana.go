@@ -7,6 +7,7 @@
 package katanas
 
 import (
+	"fmt"
 	"io"
 
 	"github.com/influx6/faux/context"
@@ -22,6 +23,7 @@ func Draw() {}
 // Slash is the default tasks due to below annotation.
 // @default
 func Slash() error {
+	fmt.Println("Welcome to Katana slash!")
 	return nil
 }
 
