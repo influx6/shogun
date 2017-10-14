@@ -634,10 +634,7 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
             {{end}}
         {{end}}
     {{end}}
-      default:
-          {{ $defFunc := $elem.Default}} {{if notequal $defFunc nil}}
-          {{end}}
-    {{ end }}
+    {{end}}
   }
   return nil
 }

@@ -84,14 +84,14 @@ type PackageFunctions struct {
 }
 
 // Default returns the function set has default for when the execution is called.
-func (pn PackageFunctions) Default() *Function {
+func (pn PackageFunctions) Default() []Function {
 	for _, item := range pn.List {
 		if item.Default {
-			return &item
+			return []Function{item}
 		}
 	}
 
-	return &Function{}
+	return nil
 }
 
 // HasFauxImports returns true/false if any part of the function uses faux context.
