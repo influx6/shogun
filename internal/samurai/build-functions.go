@@ -102,6 +102,17 @@ type BuildList struct {
 	Functions       []internal.PackageFunctions
 }
 
+// Default returns the associated function set as default.
+func (pn BuildList) Default() []internal.Function {
+	for _, fm := range pn.Functions {
+		if res := fm.Default(); len(res) != 0 {
+			return res
+		}
+	}
+
+	return nil
+}
+
 // HasGoogleImports returns true/false if any part of the function uses faux context.
 func (pn BuildList) HasGoogleImports() bool {
 	for _, item := range pn.Functions {
