@@ -26,6 +26,7 @@ const (
 // const for input state.
 const (
 	NoArgument                         = iota + 10 // is func()
+	WithContextArgument                            // is func(Context)
 	WithMapArgument                                // is func(map[string]interface{})
 	WithStructArgument                             // is func(Movie)
 	WithImportedObjectArgument                     // is func(types.IMovie)

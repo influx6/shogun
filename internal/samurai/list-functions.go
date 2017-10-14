@@ -258,6 +258,8 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 		if contextType == internal.UseUnknownContext {
 			contextType = internal.NoContext
 			argumentType, importList = getArgumentsState(def.Args[0], nil)
+		} else {
+			argumentType = internal.WithContextArgument
 		}
 	case 2:
 		contextType, ctxImport = getContextState(def.Args[0])
@@ -323,7 +325,6 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 		"shogun-pkg-fn-message",
 		string(templates.Must("shogun-pkg-fn-message.tml")),
 		template.FuncMap{
-
 			"returnsError": func(d int) bool {
 				return d == internal.ErrorReturn
 			},
@@ -338,6 +339,9 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 			},
 			"hasNoArgument": func(d int) bool {
 				return d == internal.NoArgument
+			},
+			"hasContextArgument": func(d int) bool {
+				return d == internal.WithContextArgument
 			},
 			"hasMapArgument": func(d int) bool {
 				return d == internal.WithMapArgument
@@ -391,6 +395,9 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 			},
 			"hasNoArgument": func(d int) bool {
 				return d == internal.NoArgument
+			},
+			"hasContextArgument": func(d int) bool {
+				return d == internal.WithContextArgument
 			},
 			"hasMapArgument": func(d int) bool {
 				return d == internal.WithMapArgument

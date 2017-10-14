@@ -270,6 +270,9 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 				"hasNoArgument": func(d int) bool {
 					return d == internal.NoArgument
 				},
+				"hasContextArgument": func(d int) bool {
+					return d == internal.WithContextArgument
+				},
 				"hasMapArgument": func(d int) bool {
 					return d == internal.WithMapArgument
 				},

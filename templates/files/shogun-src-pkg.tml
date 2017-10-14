@@ -99,6 +99,47 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
               {{end}}
             {{end}}
         {{end}}
+        {{if hasContextArgument .Type }}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx)
+              {{else}}
+                {{.RealName}}(ctx)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx)
+              {{else}}
+                {{.RealName}}(ctx)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
         {{if hasMapArgument .Type }}
             var data map[string]interface{}
 
