@@ -76,11 +76,6 @@ Only the following function types format are allowed and others will be ignored,
 - `func(map[string]interface{}) error`
 - `func(Context, map[string]interface{}) error`
 
-- `func(Interface) error`
-- `func(Context, Interface) error`
-- `func(Interface, io.WriteCloser) error`
-- `func(Context, Interface, io.WriteCloser) error`
-
 - `func(Struct) error`
 - `func(Context, Struct) error`
 - `func(Struct, io.WriteCloser) error`
@@ -98,14 +93,14 @@ Only the following function types format are allowed and others will be ignored,
 *Where `Context` => represents the context package used of the 3 allowed.*
 *Where `Struct`   => represents any struct declared in package*
 *where `Interface` => represents any interface declared in package*
-*where `package.Type` => represents any type(Struct, Interface, OtherType) imported from other package, except functions*
+*where `package.Type` => represents Struct type imported from other package*
 
 Any other thing beyond this type formats won't be allowed and will be ignored in
 function list and execution.
 
 ## Commands
 
-But using the `shogun` command, we can do the following:
+Using the `shogun` command, we can do the following:
 
 - Build a package shogun files
 
