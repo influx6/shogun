@@ -102,6 +102,28 @@ type BuildList struct {
 	Functions       []internal.PackageFunctions
 }
 
+// HasGoogleImports returns true/false if any part of the function uses faux context.
+func (pn BuildList) HasGoogleImports() bool {
+	for _, item := range pn.Functions {
+		if item.HasGoogleImports() {
+			return true
+		}
+	}
+
+	return false
+}
+
+// HasFauxImports returns true/false if any part of the function uses faux context.
+func (pn BuildList) HasFauxImports() bool {
+	for _, item := range pn.Functions {
+		if item.HasFauxImports() {
+			return true
+		}
+	}
+
+	return false
+}
+
 // BuildPackageForDir generates needed package files for creating new function based executable binaries.
 func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string, cmd string, currentDir string, binaryPath string, skipBuild bool, subs map[string]BuildList, ctx build.Context) (BuildList, error) {
 	if subs == nil {
@@ -229,10 +251,53 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 	list.List = append(list.List, gen.WriteDirective{
 		FileName: fmt.Sprintf("pkg_%s.go", binaryFileName(binaryName)),
 		Dir:      packageBinaryFilePath,
-		Writer: gen.SourceTextWithName(
+		Writer: fmtwriter.NewWith(vlog, gen.SourceTextWithName(
 			"shogun:src-pkg",
 			string(templates.Must("shogun-src-pkg.tml")),
-			template.FuncMap{},
+			template.FuncMap{
+				"returnsError": func(d int) bool {
+					return d == internal.ErrorReturn
+				},
+				"usesNoContext": func(d int) bool {
+					return d == internal.NoContext
+				},
+				"usesGoogleContext": func(d int) bool {
+					return d == internal.UseGoogleContext
+				},
+				"usesFauxContext": func(d int) bool {
+					return d == internal.UseFauxCancelContext
+				},
+				"hasNoArgument": func(d int) bool {
+					return d == internal.NoArgument
+				},
+				"hasMapArgument": func(d int) bool {
+					return d == internal.WithMapArgument
+				},
+				"hasStructArgument": func(d int) bool {
+					return d == internal.WithStructArgument
+				},
+				"hasReadArgument": func(d int) bool {
+					return d == internal.WithReaderArgument
+				},
+				"hasWriteArgument": func(d int) bool {
+					return d == internal.WithWriteCloserArgument
+				},
+				"hasImportedArgument": func(d int) bool {
+					return d == internal.WithImportedObjectArgument
+				},
+				"hasReadArgumentWithWriter": func(d int) bool {
+					return d == internal.WithReaderAndWriteCloserArgument
+				},
+				"hasStructArgumentWithWriter": func(d int) bool {
+					return d == internal.WithStructAndWriteCloserArgument
+				},
+				"hasMapArgumentWithWriter": func(d int) bool {
+					return d == internal.WithMapAndWriteCloserArgument
+				},
+				"hasImportedArgumentWithWriter": func(d int) bool {
+					return d == internal.WithImportedAndWriteCloserArgument
+				},
+			},
 			struct {
 				BinaryName string
 				Subs       map[string]BuildList
@@ -242,7 +307,7 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 				Main:       list,
 				Subs:       subs,
 			},
-		),
+		), true, true),
 	})
 
 	list.List = append(list.List, gen.WriteDirective{

@@ -11,6 +11,11 @@ KATANA COMMANDS:
 {{ range $_, $elem := .Subs}}
 ⡿ {{ $elem.BinaryName }}              {{$elem.Desc}}
 {{ end }}{{end}}
+USING CONTEXT:
+
+To provide a duration time for functions where cancelable contexts or google context are
+used, then resort to use the "-t" flag .e.g "-t=40m".
+
 HELP:
 
 To see more on each command:
@@ -25,4 +30,5 @@ To see more on each command with source and full description:
 
   help [subcommand] [commandName]
 
-  help -f -s [subcommand] [commandName]{{end}}
+  help -f -s [subcommand] [commandName]
+{{end}}

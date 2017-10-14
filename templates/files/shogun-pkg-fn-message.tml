@@ -1,0 +1,15 @@
+Shogun clan {{ quote .PackagePath}}
+Samurai katana function {{quote .RealName}} (Alias "{{.Name}}")
+
+SYNOPSES:
+{{.Synopses}}
+
+DESCRIPTION:
+{{.Description}}
+
+ARGUMENT REQUIREMENTS:
+{{if hasMapArgument .Type }}Expects JSON data through STDIn.{{end}}{{if hasStructArgument .Type }}Expects JSON data through STDIn.{{end}}{{if hasImportedArgument .Type }}Expects JSON data through STDIn.{{end}}{{if hasReadArgumentWithWriter .Type }}Expects Incoming data through STDIn.
+Produces Outgoing data through STDOut.{{end}}{{if hasStructArgumentWithWriter .Type }}Expects JSON data through STDIn.
+Produces Outgoing data through STDOut.{{end}}{{if hasMapArgumentWithWriter .Type }}Expects JSON data through STDIn.
+Produces Outgoing data through STDOut.{{end}}{{if hasImportedArgumentWithWriter .Type }}Expects JSON data through STDIn.
+Produces Outgoing data through STDOut.{{end}}

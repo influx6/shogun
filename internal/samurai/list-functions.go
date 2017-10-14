@@ -1,21 +1,28 @@
 package samurai
 
 import (
+	"bytes"
 	"errors"
+	"fmt"
 	"go/doc"
 	"os"
 	"strings"
+	"text/template"
 
 	"github.com/influx6/faux/metrics"
 	"github.com/influx6/faux/vfiles"
 	"github.com/influx6/gobuild/build"
 	"github.com/influx6/gobuild/srcpath"
 	"github.com/influx6/moz/ast"
+	"github.com/influx6/moz/gen"
 	"github.com/influx6/shogun/internal"
+	"github.com/influx6/shogun/templates"
 )
 
 const (
-	defaultDesc = "No description provided."
+	defaultDesc   = "No description provided."
+	fauxContext   = "github.com/influx6/faux/context"
+	googleContext = "context"
 )
 
 // errors.
@@ -233,7 +240,7 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 	var argumentType int
 	var contextType int
 
-	var importList []internal.VarMeta
+	var importList, ctxImport internal.VarMeta
 
 	switch retLen {
 	case 0:
@@ -247,13 +254,13 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 		contextType = internal.NoContext
 		argumentType = internal.NoArgument
 	case 1:
-		contextType = getContextState(def.Args[0])
+		contextType, ctxImport = getContextState(def.Args[0])
 		if contextType == internal.UseUnknownContext {
 			contextType = internal.NoContext
 			argumentType, importList = getArgumentsState(def.Args[0], nil)
 		}
 	case 2:
-		contextType = getContextState(def.Args[0])
+		contextType, ctxImport = getContextState(def.Args[0])
 		if contextType == internal.UseUnknownContext {
 			contextType = internal.NoContext
 			argumentType, importList = getArgumentsState(def.Args[0], &def.Args[1])
@@ -261,7 +268,7 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 			argumentType, importList = getArgumentsState(def.Args[1], nil)
 		}
 	case 3:
-		contextType = getContextState(def.Args[0])
+		contextType, ctxImport = getContextState(def.Args[0])
 		argumentType, importList = getArgumentsState(def.Args[1], &def.Args[2])
 	}
 
@@ -281,10 +288,12 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 	}
 
 	fn.RealName = def.Name
-	fn.Imports = importList
 	fn.Type = argumentType
 	fn.Return = returnType
+	fn.Imports = importList
 	fn.Context = contextType
+	fn.ContextImport = ctxImport
+	fn.Source = function.Source
 	fn.Package = function.Package
 	fn.PackagePath = function.Path
 	fn.Name = strings.ToLower(def.Name)
@@ -301,45 +310,176 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 		fn.Synopses = defaultDesc
 	}
 
+	if function.HasAnnotation("@default") {
+		fn.Default = true
+	}
+
 	if depends, ok := function.GetAnnotation("@depends"); ok {
 		fn.Depends = append(fn.Depends, depends.Arguments...)
 	}
+
+	var helpMessage bytes.Buffer
+	if _, err := gen.SourceTextWithName(
+		"shogun-pkg-fn-message",
+		string(templates.Must("shogun-pkg-fn-message.tml")),
+		template.FuncMap{
+
+			"returnsError": func(d int) bool {
+				return d == internal.ErrorReturn
+			},
+			"usesNoContext": func(d int) bool {
+				return d == internal.NoContext
+			},
+			"usesGoogleContext": func(d int) bool {
+				return d == internal.UseGoogleContext
+			},
+			"usesFauxContext": func(d int) bool {
+				return d == internal.UseFauxCancelContext
+			},
+			"hasNoArgument": func(d int) bool {
+				return d == internal.NoArgument
+			},
+			"hasMapArgument": func(d int) bool {
+				return d == internal.WithMapArgument
+			},
+			"hasStructArgument": func(d int) bool {
+				return d == internal.WithStructArgument
+			},
+			"hasReadArgument": func(d int) bool {
+				return d == internal.WithReaderArgument
+			},
+			"hasWriteArgument": func(d int) bool {
+				return d == internal.WithWriteCloserArgument
+			},
+			"hasImportedArgument": func(d int) bool {
+				return d == internal.WithImportedObjectArgument
+			},
+			"hasReadArgumentWithWriter": func(d int) bool {
+				return d == internal.WithReaderAndWriteCloserArgument
+			},
+			"hasStructArgumentWithWriter": func(d int) bool {
+				return d == internal.WithStructAndWriteCloserArgument
+			},
+			"hasMapArgumentWithWriter": func(d int) bool {
+				return d == internal.WithMapAndWriteCloserArgument
+			},
+			"hasImportedArgumentWithWriter": func(d int) bool {
+				return d == internal.WithImportedAndWriteCloserArgument
+			},
+		},
+		fn,
+	).WriteTo(&helpMessage); err != nil {
+		return fn, false, fmt.Errorf("Failed to generate function's %q help message: %+q", fn.RealName, err)
+	}
+
+	var helpMessageWithSource bytes.Buffer
+	if _, err := gen.SourceTextWithName(
+		"shogun-pkg-fn-message-withsource",
+		string(templates.Must("shogun-pkg-fn-message-withsource.tml")),
+		template.FuncMap{
+			"returnsError": func(d int) bool {
+				return d == internal.ErrorReturn
+			},
+			"usesNoContext": func(d int) bool {
+				return d == internal.NoContext
+			},
+			"usesGoogleContext": func(d int) bool {
+				return d == internal.UseGoogleContext
+			},
+			"usesFauxContext": func(d int) bool {
+				return d == internal.UseFauxCancelContext
+			},
+			"hasNoArgument": func(d int) bool {
+				return d == internal.NoArgument
+			},
+			"hasMapArgument": func(d int) bool {
+				return d == internal.WithMapArgument
+			},
+			"hasStructArgument": func(d int) bool {
+				return d == internal.WithStructArgument
+			},
+			"hasReadArgument": func(d int) bool {
+				return d == internal.WithReaderArgument
+			},
+			"hasWriteArgument": func(d int) bool {
+				return d == internal.WithWriteCloserArgument
+			},
+			"hasImportedArgument": func(d int) bool {
+				return d == internal.WithImportedObjectArgument
+			},
+			"hasReadArgumentWithWriter": func(d int) bool {
+				return d == internal.WithReaderAndWriteCloserArgument
+			},
+			"hasStructArgumentWithWriter": func(d int) bool {
+				return d == internal.WithStructAndWriteCloserArgument
+			},
+			"hasMapArgumentWithWriter": func(d int) bool {
+				return d == internal.WithMapAndWriteCloserArgument
+			},
+			"hasImportedArgumentWithWriter": func(d int) bool {
+				return d == internal.WithImportedAndWriteCloserArgument
+			},
+		},
+		fn,
+	).WriteTo(&helpMessageWithSource); err != nil {
+		return fn, false, fmt.Errorf("Failed to generate function's %q help message with source: %+q", fn.RealName, err)
+	}
+
+	fn.HelpMessage = helpMessage.String()
+	fn.HelpMessageWithSource = helpMessageWithSource.String()
 
 	return fn, false, nil
 }
 
 var ioWriteCloser = "io.WriteCloser"
 
-func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, []internal.VarMeta) {
+func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internal.VarMeta) {
 	switch arg.Type {
 	case "io.Reader":
 		if arg2 == nil {
-			return internal.WithReaderArgument, nil
+			return internal.WithReaderArgument, internal.VarMeta{}
 		}
 
 		if arg2.Type == ioWriteCloser {
-			return internal.WithReaderAndWriteCloserArgument, nil
+			return internal.WithReaderAndWriteCloserArgument, internal.VarMeta{}
 		}
 
-		return internal.WithUnknownArgument, nil
+		return internal.WithUnknownArgument, internal.VarMeta{}
 	case "io.WriteCloser":
 		if arg2 == nil {
-			return internal.WithWriteCloserArgument, nil
+			return internal.WithWriteCloserArgument, internal.VarMeta{}
 		}
-		return internal.WithUnknownArgument, nil
+		return internal.WithUnknownArgument, internal.VarMeta{}
 	case "map[string]interface{}":
 		if arg2 == nil {
-			return internal.WithMapArgument, nil
+			return internal.WithMapArgument, internal.VarMeta{}
 		}
-		return internal.WithUnknownArgument, nil
+
+		if arg2.Type == ioWriteCloser {
+			return internal.WithMapAndWriteCloserArgument, internal.VarMeta{}
+		}
+
+		return internal.WithUnknownArgument, internal.VarMeta{}
 	default:
-		params := []internal.VarMeta{
-			{
-				Type:       arg.Type,
-				TypeAddr:   arg.ExType,
-				Import:     arg.Import.Path,
-				ImportNick: arg.Import.Name,
-			},
+		params := internal.VarMeta{
+			Type:       arg.Type,
+			TypeAddr:   arg.ExType,
+			Import:     arg.Import.Path,
+			ImportNick: arg.Import.Name,
+		}
+
+		if arg.ImportedObject != nil {
+			if arg.StructObject == nil {
+				return internal.WithUnknownArgument, internal.VarMeta{}
+			}
+
+			if arg2 == nil {
+				return internal.WithImportedObjectArgument, params
+			}
+
+			if arg2.Type == ioWriteCloser {
+				return internal.WithImportedAndWriteCloserArgument, params
+			}
 		}
 
 		if arg.StructObject != nil {
@@ -351,29 +491,9 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, []internal.VarM
 				return internal.WithStructAndWriteCloserArgument, params
 			}
 		}
-
-		if arg.InterfaceObject != nil {
-			if arg2 == nil {
-				return internal.WithInterfaceArgument, params
-			}
-
-			if arg2.Type == ioWriteCloser {
-				return internal.WithInterfaceAndWriteCloserArgument, params
-			}
-		}
-
-		if arg.ImportedObject != nil {
-			if arg2 == nil {
-				return internal.WithImportedAndWriteCloserArgument, params
-			}
-
-			if arg2.Type == ioWriteCloser {
-				return internal.WithInterfaceAndWriteCloserArgument, params
-			}
-		}
 	}
 
-	return internal.WithUnknownArgument, nil
+	return internal.WithUnknownArgument, internal.VarMeta{}
 }
 
 func getReturnState(arg ast.ArgType) int {
@@ -385,26 +505,29 @@ func getReturnState(arg ast.ArgType) int {
 	return internal.UnknownErrorReturn
 }
 
-func getContextState(arg ast.ArgType) int {
+func getContextState(arg ast.ArgType) (int, internal.VarMeta) {
+	var imp internal.VarMeta
+	imp.Type = arg.Type
+	imp.TypeAddr = arg.ExType
+
 	switch arg.Type {
 	case "context.Context":
-		if arg.Import.Path == "context" {
-			return internal.UseGoogleContext
+		if arg.Import.Path == googleContext {
+			imp.Import = googleContext
+			imp.ImportNick = arg.Import.Name
+			return internal.UseGoogleContext, imp
 		}
-		return internal.UseUnknownContext
+		return internal.UseUnknownContext, imp
 	case "context.CancelContext":
-		if arg.Import.Path == "github.com/influx6/faux/context" {
-			return internal.UseFauxCancelContext
+		if arg.Import.Path == fauxContext {
+			imp.Import = fauxContext
+			imp.ImportNick = arg.Import.Name
+			return internal.UseFauxCancelContext, imp
 		}
-		return internal.UseUnknownContext
-	case "context.ValueBagContext":
-		if arg.Import.Path == "github.com/influx6/faux/context" {
-			return internal.UseValueBagContext
-		}
-		return internal.UseUnknownContext
+		return internal.UseUnknownContext, imp
 	}
 
-	return internal.UseUnknownContext
+	return internal.UseUnknownContext, imp
 }
 
 // maxName returns name of longest function.
