@@ -302,3 +302,6 @@ echo "We lost the war" | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 ```bash
 {"name":"bat"} | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 ```
+
+## Contributions
+Contributions are welcome, do please checkout our [Contribution Guidlines](./contrib.md).
