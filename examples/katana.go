@@ -29,7 +29,7 @@ func Slash() error {
 
 // Buba is bub.
 func Buba(ctx context.CancelContext, name string) {
-	fmt.Printf("Welcome Buba %q.", name)
+	fmt.Printf("Welcome Buba %q.\n", name)
 }
 
 func Bob(ctx context.CancelContext) error {

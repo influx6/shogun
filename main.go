@@ -224,7 +224,8 @@ func helpAction(c *cli.Context) error {
 
 func mainAction(c *cli.Context) error {
 	if c.NArg() == 0 || c.Args().First() == "" {
-		fmt.Println("Nothing to do...")
+		fmt.Printf("⠙ Nothing to do...\n\n")
+		fmt.Println("⡿ Run `shogun help` to see what it takes to make me work.")
 		return nil
 	}
 

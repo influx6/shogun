@@ -8,11 +8,13 @@ DESCRIPTION:
 {{.Description}}
 
 ARGUMENT REQUIREMENTS:
+Errors are delivered to STDErr.
 {{if hasMapArgument .Type }}Expects JSON data through STDIn.{{end}}{{if hasStructArgument .Type }}Expects JSON data through STDIn.{{end}}{{if hasImportedArgument .Type }}Expects JSON data through STDIn.{{end}}{{if hasReadArgumentWithWriter .Type }}Expects Incoming data through STDIn.
 Produces Outgoing data through STDOut.{{end}}{{if hasStructArgumentWithWriter .Type }}Expects JSON data through STDIn.
 Produces Outgoing data through STDOut.{{end}}{{if hasMapArgumentWithWriter .Type }}Expects JSON data through STDIn.
 Produces Outgoing data through STDOut.{{end}}{{if hasImportedArgumentWithWriter .Type }}Expects JSON data through STDIn.
-Produces Outgoing data through STDOut.{{end}}
+Produces Outgoing data through STDOut.{{end}}{{if hasStringArgumentWithWriter .Type }}Expects string data through STDIn.
+Produces Outgoing data through STDOut.{{end}}{{if hasStringArgument .Type }}Expects string data through STDIn.{{end}}
 
 SOURCE:
 {{.Source}}
