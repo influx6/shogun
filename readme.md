@@ -231,7 +231,7 @@ shogun build -d=./examples
 root files
 
 ```bash
-shogun build -singlesub -d=./examples
+shogun build -skipsub -d=./examples
 ```
 
 - Build a shogun based package files in a directory and split binaries as single
