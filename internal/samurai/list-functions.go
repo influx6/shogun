@@ -406,8 +406,8 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internal.VarMet
 			}
 
 			if len(arg.Type) != 0 {
-				firstLetter := arg.Type[0]
-				if unicode.IsLower(rune(firstLetter)) {
+				name := strings.TrimPrefix(arg.Type, "*")
+				if unicode.IsLower(rune(name[0])) {
 					params.Exported = internal.UnExportedImport
 				} else {
 					params.Exported = internal.ExportedImport
@@ -425,8 +425,8 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internal.VarMet
 
 		if arg.StructObject != nil {
 			if len(arg.Type) != 0 {
-				firstLetter := arg.Type[0]
-				if unicode.IsLower(rune(firstLetter)) {
+				name := strings.TrimPrefix(arg.Type, "*")
+				if unicode.IsLower(rune(name[0])) {
 					params.Exported = internal.UnExportedImport
 				} else {
 					params.Exported = internal.ExportedImport
