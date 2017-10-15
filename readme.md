@@ -309,4 +309,4 @@ echo "We lost the war" | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 Contributions are welcome, do please checkout the [Contribution Guidlines](./contrib.md).
 
 
-Logo is a work of [Shadow Fight Wiki](shadowfight.wikia.com/wiki/Characters).
+Logo is a work of [Shadow Fight Wiki](http://shadowfight.wikia.com/wiki/Characters).
