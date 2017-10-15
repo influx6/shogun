@@ -97,18 +97,29 @@ Shogun focuses on the execution of functions, that supports a limited set of for
 More so, to match needs of most with `Context` objects, the function formats support
 the usage of Context as first place arguments.
 
+- No Argument Functions
+
 ```go
 func()
 func() error
 ```
 
+- Context Only Functions
+
 ```go
 func(Context)
 func(Context) error
+```
+
+- Map based Functions
+
+```go
 func(map[string]interface{})
 func(map[string]interface{}) error
 func(Context, map[string]interface{}) error
 ```
+
+- Struct based Functions
 
 ```go
 func(Struct)
@@ -118,6 +129,8 @@ func(Struct, io.WriteCloser) error
 func(Context, Struct, io.WriteCloser) error
 ```
 
+- Struct Pointer based Functions
+
 ```go
 func(*Struct)
 func(*Struct) error
@@ -125,6 +138,8 @@ func(Context, *Struct) error
 func(*Struct, io.WriteCloser) error
 func(Context, *Struct, io.WriteCloser) error
 ```
+
+- Imported Struct based Functions
 
 ```go
 func(package.Struct)
@@ -134,6 +149,8 @@ func(package.Struct, io.WriteCloser) error
 func(Context, package.Struct, io.WriteCloser) error
 ```
 
+- Imported Struct Pointer based Functions
+
 ```go
 func(*package.Struct)
 func(*package.Struct) error
@@ -142,17 +159,23 @@ func(*package.Struct, io.WriteCloser) error
 func(Context, *package.Struct, io.WriteCloser) error
 ```
 
+- io.Reader  based Functions
+
 ```go
 func(io.Reader)
 func(io.Reader) error
 func(Context, io.Reader) error
 ```
 
+- io.Writer based Functions
+
 ```go
 func(io.WriteCloser)
 func(io.WriteCloser) error
 func(Context, io.WriteCloser) error
 ```
+
+- io.Reader and io.Writer based Functions
 
 ```go
 func(io.Reader, io.WriteCloser)
