@@ -262,6 +262,23 @@ Before using any other command apart from `shogun list` in a package always exec
 > shogun build
 ```
 
+Shogun by defaults will be all the first level directories that have shogun files with appropriate
+binary names based on package name or if `binaryName` annotation is declared, and will generate
+a single binary if there exists any shogun files within the root with subcommands that will
+connect to other commands from shogun packages in the first level directories.
+
+This allows you to have a single binary that is bundled with all commands to execution functions
+from any other shogun package, but this can be changed to only allow single binaries incase you
+want truly separate binaries.
+
+*Note, this only applies, if you have Go files that have the `+build shogun `within the root, where `shogun build` gets executed.*
+
+Shogun will hash shogun files and ensure only when changes occur will a new build be
+made and binary will be stored in binary location as dictated by environment
+variable `SHOGUNBIN` or default `GOBIN`/`GOPATH/bin` .
+
+---------------------------------------------------------------------------
+
 Using the `shogun` command, we can do the following:
 
 - Build shogun based package files
@@ -302,19 +319,6 @@ shogun build -skipsub -d=./examples
 ```bash
 shogun build -single -d=./examples -cmd=./cmd
 ```
-
-Shogun by defaults will be all the first level directories that have shogun files with appropriate
-binary names based on package name or if `binaryName` annotation is declared, and will generate
-a single binary if there exists any shogun files within the root with subcommands that will
-connect to other commands from shogun packages in the first level directories.
-
-This allows you to have a single binary that is bundled with all commands to execution functions
-from any other shogun package, but this can be changed to only allow single binaries incase you
-want truly separate binaries.
-
-*Note, this only applies, if you have Go files that have the `+build shogun `within the root,
-where `shogun build` gets executed.*
-
 
 - Build a shogun based package files in a directory and store generated packages in directory `cmd`
 
@@ -359,10 +363,6 @@ shogun add vuz.go ball.go wreck.go
 ```bash
 shogun add -m vuz.go
 ```
-
-Shogun will hash shogun files and ensure only when changes occur will a new build be
-made and binary will be stored in binary location as dictated by environment
-variable `SHOGUNBIN` or default `GOBIN`/`GOPATH/bin` .
 
 - List all functions with
 
