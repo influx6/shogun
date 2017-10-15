@@ -2,6 +2,7 @@ package internal
 
 import (
 	"strings"
+	"text/template"
 )
 
 const (
@@ -25,19 +26,89 @@ const (
 
 // const for input state.
 const (
-	NoArgument                         = iota + 10 // is func()
-	WithContextArgument                            // is func(Context)
-	WithMapArgument                                // is func(map[string]interface{})
-	WithStructArgument                             // is func(Movie)
-	WithImportedObjectArgument                     // is func(types.IMovie)
-	WithReaderArgument                             // is func(io.Reader)
-	WithWriteCloserArgument                        // is func(io.WriteCloser)
-	WithStructAndWriteCloserArgument               // is func(Movie, io.WriteCloser)
-	WithMapAndWriteCloserArgument                  // is func(map[string]interface{}, io.WriteCloser)
-	WithImportedAndWriteCloserArgument             // is func(types.IMovie, io.WriteCloser)
-	WithReaderAndWriteCloserArgument               // is func(io.Reader, io.WriteCloser)
+	NoArgument                               = iota + 10 // is func()
+	WithContextArgument                                  // is func(Context)
+	WithStringArgument                                   // is func(string)
+	WithMapArgument                                      // is func(map[string]interface{})
+	WithStructArgument                                   // is func(Movie)
+	WithImportedObjectArgument                           // is func(types.IMovie)
+	WithReaderArgument                                   // is func(io.Reader)
+	WithWriteCloserArgument                              // is func(io.WriteCloser)
+	WithStringArgumentAndWriteCloserArgument             // is func(string, io.WriteCloser)
+	WithStructAndWriteCloserArgument                     // is func(Movie, io.WriteCloser)
+	WithMapAndWriteCloserArgument                        // is func(map[string]interface{}, io.WriteCloser)
+	WithImportedAndWriteCloserArgument                   // is func(types.IMovie, io.WriteCloser)
+	WithReaderAndWriteCloserArgument                     // is func(io.Reader, io.WriteCloser)
 	WithUnknownArgument
 )
+
+var (
+	// ArgumentFunctions contains functions to validate type.
+	ArgumentFunctions = template.FuncMap{
+		"returnsError": func(d int) bool {
+			return d == ErrorReturn
+		},
+		"usesNoContext": func(d int) bool {
+			return d == NoContext
+		},
+		"usesGoogleContext": func(d int) bool {
+			return d == UseGoogleContext
+		},
+		"usesFauxContext": func(d int) bool {
+			return d == UseFauxCancelContext
+		},
+		"hasNoArgument": func(d int) bool {
+			return d == NoArgument
+		},
+		"hasContextArgument": func(d int) bool {
+			return d == WithContextArgument
+		},
+		"hasStringArgument": func(d int) bool {
+			return d == WithStringArgument
+		},
+		"hasMapArgument": func(d int) bool {
+			return d == WithMapArgument
+		},
+		"hasStructArgument": func(d int) bool {
+			return d == WithStructArgument
+		},
+		"hasReadArgument": func(d int) bool {
+			return d == WithReaderArgument
+		},
+		"hasWriteArgument": func(d int) bool {
+			return d == WithWriteCloserArgument
+		},
+		"hasImportedArgument": func(d int) bool {
+			return d == WithImportedObjectArgument
+		},
+		"hasStringArgumentWithWriter": func(d int) bool {
+			return d == WithStringArgumentAndWriteCloserArgument
+		},
+		"hasReadArgumentWithWriter": func(d int) bool {
+			return d == WithReaderAndWriteCloserArgument
+		},
+		"hasStructArgumentWithWriter": func(d int) bool {
+			return d == WithStructAndWriteCloserArgument
+		},
+		"hasMapArgumentWithWriter": func(d int) bool {
+			return d == WithMapAndWriteCloserArgument
+		},
+		"hasImportedArgumentWithWriter": func(d int) bool {
+			return d == WithImportedAndWriteCloserArgument
+		},
+	}
+)
+
+// ShogunFunc defines a type which contains a function definition details.
+type ShogunFunc struct {
+	NS       string `json:"ns"`
+	Type     int    `json:"type"`
+	Return   int    `json:"return"`
+	Context  int    `json:"context"`
+	Name     string `json:"name"`
+	Source   string `json:"source"`
+	Function interface{}
+}
 
 // VarMeta defines a struct to hold object details.
 type VarMeta struct {

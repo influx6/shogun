@@ -27,6 +27,45 @@ var (
 {{end}} }
 )
 
+// MainShogunMeta returns ShogunFunc for all available functions to provide terse information with
+// attached function for displaying or for testing.
+func MainShogunMeta(cmd string, args []string) (internal.ShogunFunc, error) {
+  {{ if notequal (len .Subs) 0}}// If its a subcommand then let subcommand handle this.
+  if subCommands[cmd] {
+    var first string
+    var rest []string
+
+    if len(args) != 0 {
+      first = args[0]
+      rest = args[1:]
+    }
+
+    switch cmd {
+    {{ range $_, $sub := .Subs}}
+      case {{quote $sub.BinaryName}}:
+        return {{$sub.CleanBinaryName}}.MainShogunMeta(first, rest)
+    {{end}}
+    }
+  }
+  {{end}}switch cmd {
+    {{ range $_, $elem := .Main.Functions }}{{range $elem.List}}
+      case {{quote .Name}}, {{quote .RealName}}:
+        return internal.ShogunFunc{
+          Context: {{.Context}},
+          Type: {{.Type}},
+          Return: {{.Return}},
+          NS: {{quote .Name}},
+          Function: {{.RealName}},
+          Name: {{quote .RealName}},
+          Source: {{quote .Source}},
+        }, nil
+    {{end}}
+    {{end}}
+  }
+
+  return internal.ShogunFunc{}, errors.New("Not found")
+}
+
 // MainShogunExecute executes necessary commands as needed from its arguments and
 // writes corresponding outputs to provided `ougoing` writeCloser.
 func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing io.WriteCloser, ctxTimeout time.Duration) error {
@@ -136,6 +175,61 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return {{.RealName}}(ctx)
               {{else}}
                 {{.RealName}}(ctx)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasStringArgument .Type }}
+            var data bytes.Buffer
+
+            if _, err := io.Copy(&data, incoming); err != nil && err != io.EOF {
+              return err
+            }
+
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}(data.String())
+              {{else}}
+                {{.RealName}}(data.String())
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, data.String())
+              {{else}}
+                {{.RealName}}(ctx, data.String())
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, data.String())
+              {{else}}
+                {{.RealName}}(ctx, data.String())
                 return nil
               {{end}}
             {{end}}
@@ -407,6 +501,61 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
               {{else}}
                 {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasStringArgumentWithWriter .Type }}
+            var data bytes.Buffer
+
+            if _, err := io.Copy(&data, incoming); err != nil && err != io.EOF {
+              return err
+            }
+
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}(data.String(), outgoing)
+              {{else}}
+                {{.RealName}}(data.String(), outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, data.String(), outgoing)
+              {{else}}
+                {{.RealName}}(ctx, data.String(), outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, data.String(), outgoing)
+              {{else}}
+                {{.RealName}}(ctx, data.String(), outgoing)
                 return nil
               {{end}}
             {{end}}

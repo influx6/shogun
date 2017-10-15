@@ -176,10 +176,11 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 
 		binaryName = strings.ToLower(binAnnons[0].Param("name"))
 
-		desc := binAnnons[0].Param("desc")
-		if desc != "" && !strings.HasSuffix(desc, ".") {
-			desc += "."
-			binaryDesc = doc.Synopsis(desc)
+		if desc, ok := binAnnons[0].Attr("desc").(string); ok {
+			if desc != "" && !strings.HasSuffix(desc, ".") {
+				desc += "."
+				binaryDesc = doc.Synopsis(desc)
+			}
 		}
 
 	} else {
@@ -265,53 +266,7 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 		Writer: fmtwriter.NewWith(vlog, gen.SourceTextWithName(
 			"shogun:src-pkg",
 			string(templates.Must("shogun-src-pkg.tml")),
-			template.FuncMap{
-				"returnsError": func(d int) bool {
-					return d == internal.ErrorReturn
-				},
-				"usesNoContext": func(d int) bool {
-					return d == internal.NoContext
-				},
-				"usesGoogleContext": func(d int) bool {
-					return d == internal.UseGoogleContext
-				},
-				"usesFauxContext": func(d int) bool {
-					return d == internal.UseFauxCancelContext
-				},
-				"hasNoArgument": func(d int) bool {
-					return d == internal.NoArgument
-				},
-				"hasContextArgument": func(d int) bool {
-					return d == internal.WithContextArgument
-				},
-				"hasMapArgument": func(d int) bool {
-					return d == internal.WithMapArgument
-				},
-				"hasStructArgument": func(d int) bool {
-					return d == internal.WithStructArgument
-				},
-				"hasReadArgument": func(d int) bool {
-					return d == internal.WithReaderArgument
-				},
-				"hasWriteArgument": func(d int) bool {
-					return d == internal.WithWriteCloserArgument
-				},
-				"hasImportedArgument": func(d int) bool {
-					return d == internal.WithImportedObjectArgument
-				},
-				"hasReadArgumentWithWriter": func(d int) bool {
-					return d == internal.WithReaderAndWriteCloserArgument
-				},
-				"hasStructArgumentWithWriter": func(d int) bool {
-					return d == internal.WithStructAndWriteCloserArgument
-				},
-				"hasMapArgumentWithWriter": func(d int) bool {
-					return d == internal.WithMapAndWriteCloserArgument
-				},
-				"hasImportedArgumentWithWriter": func(d int) bool {
-					return d == internal.WithImportedAndWriteCloserArgument
-				},
-			},
+			internal.ArgumentFunctions,
 			struct {
 				BinaryName string
 				Subs       map[string]BuildList

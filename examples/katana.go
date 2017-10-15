@@ -28,7 +28,8 @@ func Slash() error {
 }
 
 // Buba is bub.
-func Buba(ctx context.ValueBagContext) {
+func Buba(ctx context.CancelContext, name string) {
+	fmt.Printf("Welcome Buba %q.", name)
 }
 
 func Bob(ctx context.CancelContext) error {
@@ -48,6 +49,10 @@ func Juga(ctx context.CancelContext, r io.Reader) error {
 }
 
 func Doba(ctx context.CancelContext, mp ty.IBlob) error {
+	return nil
+}
+
+func Uiga(ctx context.CancelContext, n string, w io.WriteCloser) error {
 	return nil
 }
 

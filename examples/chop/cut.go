@@ -1,5 +1,13 @@
 // +build shogun
 
+/* Package chop provides chop functions.
+
+@binaryName(asJSON, name => chop, {
+  {
+    "desc": "chop will chop up your day"
+  }
+})
+*/
 package chop
 
 import "context"

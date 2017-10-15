@@ -7,7 +7,6 @@ import (
 	"go/doc"
 	"os"
 	"strings"
-	"text/template"
 
 	"github.com/influx6/faux/metrics"
 	"github.com/influx6/faux/vfiles"
@@ -128,10 +127,11 @@ func ListFunctionsForDir(vlog, events metrics.Metrics, dir string, ctx build.Con
 			binaryName = pkgItem.Name
 		}
 
-		desc := binAnnon.Param("desc")
-		if desc != "" && !strings.HasSuffix(desc, ".") {
-			desc += "."
-			binaryDesc = doc.Synopsis(desc)
+		if desc, ok := binAnnon.Attr("desc").(string); ok {
+			if desc != "" && !strings.HasSuffix(desc, ".") {
+				desc += "."
+				binaryDesc = doc.Synopsis(desc)
+			}
 		}
 	}
 
@@ -224,6 +224,10 @@ func pullFunctionFromDeclr(pkg ast.Package, declr *ast.PackageDeclaration) ([]in
 func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) (internal.Function, bool, error) {
 	var fn internal.Function
 
+	if !function.Exported {
+		return fn, true, nil
+	}
+
 	if function.HasAnnotation("@ignore") {
 		return fn, true, nil
 	}
@@ -298,6 +302,7 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 	fn.Source = function.Source
 	fn.Package = function.Package
 	fn.PackagePath = function.Path
+	fn.Exported = function.Exported
 	fn.Name = strings.ToLower(def.Name)
 	fn.PackageFile = function.FilePath
 	fn.PackageFileName = function.File
@@ -324,53 +329,7 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 	if _, err := gen.SourceTextWithName(
 		"shogun-pkg-fn-message",
 		string(templates.Must("shogun-pkg-fn-message.tml")),
-		template.FuncMap{
-			"returnsError": func(d int) bool {
-				return d == internal.ErrorReturn
-			},
-			"usesNoContext": func(d int) bool {
-				return d == internal.NoContext
-			},
-			"usesGoogleContext": func(d int) bool {
-				return d == internal.UseGoogleContext
-			},
-			"usesFauxContext": func(d int) bool {
-				return d == internal.UseFauxCancelContext
-			},
-			"hasNoArgument": func(d int) bool {
-				return d == internal.NoArgument
-			},
-			"hasContextArgument": func(d int) bool {
-				return d == internal.WithContextArgument
-			},
-			"hasMapArgument": func(d int) bool {
-				return d == internal.WithMapArgument
-			},
-			"hasStructArgument": func(d int) bool {
-				return d == internal.WithStructArgument
-			},
-			"hasReadArgument": func(d int) bool {
-				return d == internal.WithReaderArgument
-			},
-			"hasWriteArgument": func(d int) bool {
-				return d == internal.WithWriteCloserArgument
-			},
-			"hasImportedArgument": func(d int) bool {
-				return d == internal.WithImportedObjectArgument
-			},
-			"hasReadArgumentWithWriter": func(d int) bool {
-				return d == internal.WithReaderAndWriteCloserArgument
-			},
-			"hasStructArgumentWithWriter": func(d int) bool {
-				return d == internal.WithStructAndWriteCloserArgument
-			},
-			"hasMapArgumentWithWriter": func(d int) bool {
-				return d == internal.WithMapAndWriteCloserArgument
-			},
-			"hasImportedArgumentWithWriter": func(d int) bool {
-				return d == internal.WithImportedAndWriteCloserArgument
-			},
-		},
+		internal.ArgumentFunctions,
 		fn,
 	).WriteTo(&helpMessage); err != nil {
 		return fn, false, fmt.Errorf("Failed to generate function's %q help message: %+q", fn.RealName, err)
@@ -380,53 +339,7 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 	if _, err := gen.SourceTextWithName(
 		"shogun-pkg-fn-message-withsource",
 		string(templates.Must("shogun-pkg-fn-message-withsource.tml")),
-		template.FuncMap{
-			"returnsError": func(d int) bool {
-				return d == internal.ErrorReturn
-			},
-			"usesNoContext": func(d int) bool {
-				return d == internal.NoContext
-			},
-			"usesGoogleContext": func(d int) bool {
-				return d == internal.UseGoogleContext
-			},
-			"usesFauxContext": func(d int) bool {
-				return d == internal.UseFauxCancelContext
-			},
-			"hasNoArgument": func(d int) bool {
-				return d == internal.NoArgument
-			},
-			"hasContextArgument": func(d int) bool {
-				return d == internal.WithContextArgument
-			},
-			"hasMapArgument": func(d int) bool {
-				return d == internal.WithMapArgument
-			},
-			"hasStructArgument": func(d int) bool {
-				return d == internal.WithStructArgument
-			},
-			"hasReadArgument": func(d int) bool {
-				return d == internal.WithReaderArgument
-			},
-			"hasWriteArgument": func(d int) bool {
-				return d == internal.WithWriteCloserArgument
-			},
-			"hasImportedArgument": func(d int) bool {
-				return d == internal.WithImportedObjectArgument
-			},
-			"hasReadArgumentWithWriter": func(d int) bool {
-				return d == internal.WithReaderAndWriteCloserArgument
-			},
-			"hasStructArgumentWithWriter": func(d int) bool {
-				return d == internal.WithStructAndWriteCloserArgument
-			},
-			"hasMapArgumentWithWriter": func(d int) bool {
-				return d == internal.WithMapAndWriteCloserArgument
-			},
-			"hasImportedArgumentWithWriter": func(d int) bool {
-				return d == internal.WithImportedAndWriteCloserArgument
-			},
-		},
+		internal.ArgumentFunctions,
 		fn,
 	).WriteTo(&helpMessageWithSource); err != nil {
 		return fn, false, fmt.Errorf("Failed to generate function's %q help message with source: %+q", fn.RealName, err)
@@ -442,6 +355,16 @@ var ioWriteCloser = "io.WriteCloser"
 
 func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internal.VarMeta) {
 	switch arg.Type {
+	case "string":
+		if arg2 == nil {
+			return internal.WithStringArgument, internal.VarMeta{}
+		}
+
+		if arg2.Type == ioWriteCloser {
+			return internal.WithStringArgumentAndWriteCloserArgument, internal.VarMeta{}
+		}
+
+		return internal.WithUnknownArgument, internal.VarMeta{}
 	case "io.Reader":
 		if arg2 == nil {
 			return internal.WithReaderArgument, internal.VarMeta{}
