@@ -184,8 +184,11 @@ func(Context, io.Reader, io.WriteCloser) error
 ```
 
 *Where `Context` => represents the context package used of the 3 allowed.*
+
 *Where `Struct`   => represents any struct declared in package*
+
 *where `Interface` => represents any interface declared in package*
+
 *where `package.Type` => represents Struct type imported from other package*
 
 *Any other thing beyond this type formats won't be allowed and will be ignored in
