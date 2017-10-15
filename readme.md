@@ -3,10 +3,12 @@
 Shogun
 ---------
 
-Shogun provides Functions as Commands(FACM), which allows the execution of Go functions from commandline,
-through the standard input, output and error channels of your terminal or pty terminal.
-Shogun also creates project files and binaries for all packages marked which also lets
-you quickly create CLI binaries for your functions, which can be moved and run anywhere
+Shogun provides Functions as Commands(FACM), which allows the execution of Go functions from the terminal.
+Such functions receive data through the standard input, respond through standard output and standard error
+channels of your termianl or pty terminal.
+
+Shogun also creates project files and binaries for all packages, which lets you
+quickly generate Go binaries for your functions, which can be moved and run anywhere
 individually.
 
 *Inspired by [mage](https://github.com/magefile/mage) and [Amazon Lambda functions](http://docs.aws.amazon.com/lambda/latest/dg/lambda-introduction-function.html) as Runnable items*
