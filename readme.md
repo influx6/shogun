@@ -227,6 +227,13 @@ shogun build -skip
 shogun build -d=./examples
 ```
 
+- Build a shogun based package files in a directory and only generate binary for
+root files
+
+```bash
+shogun build -singlesub -d=./examples
+```
+
 - Build a shogun based package files in a directory and split binaries as single
 
 ```bash

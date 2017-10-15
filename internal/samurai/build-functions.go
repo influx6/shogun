@@ -42,16 +42,21 @@ type BuildFunctions struct {
 }
 
 // BuildPackage builds a shogun binarie commandline files for giving directory and 1 level directory.
-func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdDir string, cuDir string, binaryPath string, skipBuild bool, dontCombineRoot bool, ctx build.Context) (BuildFunctions, error) {
+func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdDir string, cuDir string, binaryPath string, skipBuild bool, dontCombineRoot bool, dontBuildSub bool, ctx build.Context) (BuildFunctions, error) {
 	var list BuildFunctions
 	list.Subs = make(map[string]BuildList)
+
+	skipSubBuild := skipBuild
+	if !skipBuild && dontBuildSub {
+		skipSubBuild = true
+	}
 
 	if err := vfiles.WalkDirSurface(dir, func(rel string, abs string, info os.FileInfo) error {
 		if !info.IsDir() {
 			return nil
 		}
 
-		res, err2 := BuildPackageForDir(vlog, events, abs, cmdDir, cuDir, binaryPath, skipBuild, map[string]BuildList{}, ctx)
+		res, err2 := BuildPackageForDir(vlog, events, abs, cmdDir, cuDir, binaryPath, skipSubBuild, map[string]BuildList{}, ctx)
 		if err2 != nil {
 			if err2 == ErrSkipDir {
 				return nil
