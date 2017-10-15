@@ -103,30 +103,43 @@ the usage of Context as first place arguments.
 - `func(Context)`
 - `func(Context) error`
 
+- `func(map[string]interface{})`
 - `func(map[string]interface{}) error`
 - `func(Context, map[string]interface{}) error`
 
+- `func(Struct)`
 - `func(Struct) error`
 - `func(Context, Struct) error`
 - `func(Struct, io.WriteCloser) error`
 - `func(Context, Struct, io.WriteCloser) error`
 
+- `func(*Struct)`
 - `func(*Struct) error`
 - `func(Context, *Struct) error`
 - `func(*Struct, io.WriteCloser) error`
 - `func(Context, *Struct, io.WriteCloser) error`
 
+- `func(package.Struct)`
 - `func(package.Struct) error`
 - `func(Context, package.Struct) error`
 - `func(package.Struct, io.WriteCloser) error`
 - `func(Context, package.Struct, io.WriteCloser) error`
 
+- `func(*package.Struct)`
 - `func(*package.Struct) error`
 - `func(Context, *package.Struct) error`
 - `func(*package.Struct, io.WriteCloser) error`
 - `func(Context, *package.Struct, io.WriteCloser) error`
 
+- `func(io.Reader)`
 - `func(io.Reader) error`
+- `func(Context, io.Reader) error`
+
+- `func(io.WriteCloser)`
+- `func(io.WriteCloser) error`
+- `func(Context, io.WriteCloser) error`
+
+- `func(io.Reader, io.WriteCloser)`
 - `func(io.Reader, io.WriteCloser) error`
 - `func(Context, io.Reader, io.WriteCloser) error`
 
@@ -166,10 +179,6 @@ func Draw() {}
 func Slash() error {
 	fmt.Println("Welcome to Katana slash!")
 	return nil
-}
-
-// Buba is bub.
-func Buba(ctx context.ValueBagContext) {
 }
 
 func Bob(ctx context.CancelContext, name string) error {
