@@ -235,7 +235,7 @@ func helpAction(c *cli.Context) error {
 		exec.Command("%s/%s help %s", binaryPath, c.Args().First(), strings.Join(c.Args().Tail(), " ")),
 		exec.Output(&response),
 		exec.Err(&responseErr),
-		exec.Input(os.Stdout),
+		exec.Output(os.Stdout),
 	)
 
 	if err := binCmd.Exec(context.Background(), events); err != nil {
