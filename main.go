@@ -32,6 +32,8 @@ var (
 	Version          = "0.0.1"
 	shogunateDirName = "katanas"
 	ignoreAddition   = ".shogun"
+	goPath           = os.Getenv("GOPATH")
+	goSrcPath        = filepath.Join(goPath, "src")
 	goosRuntime      = runtime.GOOS
 	packageReg       = regexp.MustCompile(`package \w+`)
 	binNameReg       = regexp.MustCompile("\\W+")
@@ -393,7 +395,7 @@ func buildAction(c *cli.Context) error {
 
 	for _, sub := range directive.Subs {
 		if hashData, ok := hashList.Subs[sub.Path]; ok {
-			hashFile := filepath.Join(currentDir, sub.PkgPath, ".hashfile")
+			hashFile := filepath.Join(goSrcPath, filepath.Dir(sub.PkgPath), ".hashfile")
 			prevHash, err := readFile(hashFile)
 
 			if err == nil && prevHash == hashData.Hash && !forceBuild {
@@ -416,8 +418,9 @@ func buildAction(c *cli.Context) error {
 
 	// Validate hash of main cmd.
 	if !forceBuild {
-		hashFile := filepath.Join(currentDir, directive.Main.PkgPath, ".hashfile")
-		if prevHash, err := readFile(hashFile); err == nil && prevHash == hashList.Main.Hash && !subUpdated {
+		hashFile := filepath.Join(goSrcPath, filepath.Dir(directive.Main.PkgPath), ".hashfile")
+		prevHash, err := readFile(hashFile)
+		if err == nil && prevHash == hashList.Main.Hash && !subUpdated {
 			return nil
 		}
 	}
