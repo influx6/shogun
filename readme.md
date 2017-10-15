@@ -213,6 +213,11 @@ timeout for the 2 giving context else the context will not have expiration deadl
 
 
 ## CLI Usage
+Before using any other command apart from `shogun list` in a package always execute:
+
+```bash
+> shogun build
+```
 
 Using the `shogun` command, we can do the following:
 
