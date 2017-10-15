@@ -19,7 +19,7 @@ JSON payloads to be loaded into a `Struct` type.*
 
 *More so, all response must either be either an error returned which will be delivered through
 the standard error file `stderr` or all functions must receive a `io.WriteCloser` to deliver
-response for an execution of a function.*
+response for an execution of a function to the standard output file `stdout`.*
 
 ## Install
 
@@ -183,7 +183,7 @@ func(io.Reader, io.WriteCloser) error
 func(Context, io.Reader, io.WriteCloser) error
 ```
 
-*Where `Context` => represents the context package used of the 3 allowed.*
+*Where `Context` => represents the context package used of the 2 allowed.*
 
 *Where `Struct`   => represents any struct declared in package*
 
