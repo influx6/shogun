@@ -11,10 +11,27 @@ individually.
 
 *Inspired by [mage](https://github.com/magefile/mage) and [Amazon Lambda functions](http://docs.aws.amazon.com/lambda/latest/dg/lambda-introduction-function.html) as Runnable items*
 
+*Shogun follows the strict requirement that every information to be received by a function must
+come through the standard input file `stdin`, this ensures you can pass arbitrary data in or even
+JSON payloads to be loaded into a `Struct` type.*
+
+*More so, all response must either be either an error returned which will be delivered through
+the standard error file `stderr` or all functions must receive a `io.WriteCloser` to deliver
+response for an execution of a function.*
+
 ## Install
 
 ```bash
 go install -u github.com/influx6/shogun
+```
+
+Then run `shogun` to validate successful install:
+
+```bash
+> shogun
+⠙ Nothing to do...
+
+⡿ Run `shogun help` to see what it takes to make me work.
 ```
 
 ## Writing Shogun Packages
@@ -33,7 +50,7 @@ Your are free to use any other build tag as well and will be sorted accordingly.
 
 Shogun by default will save binaries into the `GOBIN` or `GOPATH/bin` path extracted
 from the environment, however this can be changed by setting a `SHOGUNBIN` environment
-varable. More so, Shogun names all binaries the name of the parent package unless one
+variable. More so, Shogun names all binaries the name of the parent package unless one
 declares an explicit annotation `@binaryName` at the package level.
 
 ```
@@ -67,7 +84,7 @@ the `shogun` command, which makes it very usable for easy deployable self contai
 that can be used in place where behaviors need to be exposed as functions.
 
 Shogun packages are normal Go packages and all directories within the root where shogun
-is runned will be parsed and processed for identification of possible shogun packages,
+is executed will be parsed and processed for identification of possible shogun packages,
 where those identified will each package will be a binary in and of itself and the main
 package if any found will combine all other binaries into a single one if so desired.
 
@@ -153,7 +170,8 @@ func Slash() error {
 func Buba(ctx context.ValueBagContext) {
 }
 
-func Bob(ctx context.CancelContext) error {
+func Bob(ctx context.CancelContext, name string) error {
+  fmt.Printf("Welcome to bob %q.\n",name)
 	return nil
 }
 
@@ -162,9 +180,9 @@ func Jija(ctx context.CancelContext, mp ty.Woofer) error {
 }
 ```
 
-In shogun, you can tag a function as the default function to be runned by using
-the  `@default` annotation. This ensures if binary generated is called or if shogun
-command is called with binary name without argument, then that function will be called.
+In shogun, you can tag a function as the default function to be executed every time
+when it is called through shogun or through it's generated binary, by tagging it
+with a `@default` annotation.
 
 
 ### Using Context
@@ -175,23 +193,50 @@ If you need context then it must always be the first argument.
 - context "context.Context"
 - github.com/influx6/fuax/context "context.CancelContext"
 
-When using `context.Context` as the context type which is part of the Go core packages,
-as far as the context is the only argument of any function if any json sent as input,
-then all json key-value pairs will be copied into the context.
+When using `context.Context` package from the internal Go packages, has a means of
+timeout for the execution life time of a function. Support of filling context with value
+is not planned or desired.
 
-Shogun will use the `-time` flag to set lifetime timeout for the 2 giving context else
-the context will not have expiration deadlines.
+Shogun will use the `-time` flag received through the commandline to set lifetime
+timeout for the 2 giving context else the context will not have expiration deadlines.
 
 
 ## CLI Usage
 
 Using the `shogun` command, we can do the following:
 
-- Build a package shogun files
+- Build shogun based package files
+Run this if the shogun files and directories exists right in the root directory.
 
 ```bash
 shogun build
 ```
+
+- Build shogun based package files without generating binaries
+Run this if the shogun files and directories exists right in the root directory.
+
+```bash
+shogun build -skip
+```
+
+- Build a shogun based package files in a directory
+
+```bash
+shogun build -d=./examples
+```
+
+- Build a shogun based package files in a directory without generating binaries
+
+```bash
+shogun build -skip -d=./examples
+```
+
+- Force rebuild a shogun based package files in a directory
+
+```bash
+shogun build -f -d=./examples
+```
+
 
 Shogun will hash shogun files and ensure only when changes occur will a new build be
 made and binary will be stored in binary location as dictated by environment
