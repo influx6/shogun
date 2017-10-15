@@ -268,6 +268,12 @@ Run this if the shogun files and directories exists right in the root directory.
 shogun build
 ```
 
+- Build shogun based package files and remove generated package
+
+```bash
+shogun build -rm
+```
+
 - Build shogun based package files without generating binaries
 Run this if the shogun files and directories exists right in the root directory.
 
@@ -325,6 +331,31 @@ shogun build -skip -d=./examples
 shogun build -f -d=./examples
 ```
 
+- Add new shogun file to current package
+
+```bash
+shogun add vuz.go
+```
+
+- Add new shogun file into a directory in current package
+
+```bash
+shogun add -dir=vuz vuz.go
+```
+
+- Add new shogun files into package
+
+```bash
+shogun add vuz.go ball.go wreck.go
+```
+
+*You can also add more files into a directory in this manner.*
+
+- Add new shogun files into package but you `main` as package name
+
+```bash
+shogun add -m vuz.go
+```
 
 Shogun will hash shogun files and ensure only when changes occur will a new build be
 made and binary will be stored in binary location as dictated by environment
