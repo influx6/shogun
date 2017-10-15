@@ -155,7 +155,7 @@ func addAction(c *cli.Context) error {
 		fmt.Printf("⠙ Run `shogun add -dir=voz bob.go dog.go` to add `bob.go` and `dog.go` to `voz` directory\n")
 		fmt.Printf("⠙ Run `shogun add -dir=voz bob.go ...[filenames]` to add more files to `voz` directory\n\n")
 
-		fmt.Println("⡿ Run `shogun help` to see what it takes to make me work.")
+		fmt.Println("⡿ Run `shogun -h` to see what it takes to make me work.")
 		return nil
 	}
 
@@ -204,7 +204,7 @@ func addAction(c *cli.Context) error {
 
 func helpAction(c *cli.Context) error {
 	if c.NArg() == 0 || c.Args().First() == "" {
-		fmt.Println("⡿ Run `shogun help` to see what it takes to make me work.")
+		fmt.Println("⡿ Run `shogun -h` to see what it takes to make me work.")
 		return nil
 	}
 
@@ -240,7 +240,7 @@ func helpAction(c *cli.Context) error {
 func mainAction(c *cli.Context) error {
 	if c.NArg() == 0 || c.Args().First() == "" {
 		fmt.Printf("⠙ Nothing to do...\n\n")
-		fmt.Println("⡿ Run `shogun help` to see what it takes to make me work.")
+		fmt.Println("⡿ Run `shogun -h` to see what it takes to make me work.")
 		return nil
 	}
 
