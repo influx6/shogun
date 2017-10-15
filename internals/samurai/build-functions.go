@@ -42,7 +42,7 @@ type BuildFunctions struct {
 }
 
 // BuildPackage builds a shogun binarie commandline files for giving directory and 1 level directory.
-func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdDir string, cuDir string, binaryPath string, skipBuild bool, dontCombineRoot bool, dontBuildSub bool, ctx build.Context) (BuildFunctions, error) {
+func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdDir string, cuDir string, binaryPath string, skipBuild bool, removeFiles bool, dontCombineRoot bool, dontBuildSub bool, ctx build.Context) (BuildFunctions, error) {
 	var list BuildFunctions
 	list.Subs = make(map[string]BuildList)
 
@@ -56,7 +56,7 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdD
 			return nil
 		}
 
-		res, err2 := BuildPackageForDir(vlog, events, abs, cmdDir, cuDir, binaryPath, skipSubBuild, map[string]BuildList{}, ctx)
+		res, err2 := BuildPackageForDir(vlog, events, abs, cmdDir, cuDir, binaryPath, skipSubBuild, removeFiles, map[string]BuildList{}, ctx)
 		if err2 != nil {
 			if err2 == ErrSkipDir {
 				return nil
@@ -81,7 +81,7 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdD
 	}
 
 	var err error
-	list.Main, err = BuildPackageForDir(vlog, events, dir, cmdDir, cuDir, binaryPath, skipBuild, combined, ctx)
+	list.Main, err = BuildPackageForDir(vlog, events, dir, cmdDir, cuDir, binaryPath, skipBuild, removeFiles, combined, ctx)
 	if err != nil {
 		events.Emit(metrics.Error(err).With("dir", dir).With("binary_path", binaryPath))
 		return list, err
@@ -141,7 +141,7 @@ func (pn BuildList) HasFauxImports() bool {
 }
 
 // BuildPackageForDir generates needed package files for creating new function based executable binaries.
-func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string, cmd string, currentDir string, binaryPath string, skipBuild bool, subs map[string]BuildList, ctx build.Context) (BuildList, error) {
+func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string, cmd string, currentDir string, binaryPath string, skipBuild bool, remove bool, subs map[string]BuildList, ctx build.Context) (BuildList, error) {
 	if subs == nil {
 		subs = make(map[string]BuildList)
 	}
@@ -388,10 +388,12 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 
 			fmt.Printf("Built binary for shogun %q into %q\n", binaryName, binaryPath)
 
-			fmt.Printf("Cleaning up shogun binary build files... %q\n", binaryName)
-			if err := os.RemoveAll(filepath.Join(dir, packageBinaryPath)); err != nil {
-				fmt.Printf("Failed to properly cleanup build files %q\n\n", binaryName)
-				return err
+			if remove {
+				fmt.Printf("Cleaning up shogun binary build files... %q\n", binaryName)
+				if err := os.RemoveAll(filepath.Join(dir, packageBinaryPath)); err != nil {
+					fmt.Printf("Failed to properly cleanup build files %q\n\n", binaryName)
+					return err
+				}
 			}
 
 			fmt.Printf("Shogun %q build ready\n\n", binaryName)

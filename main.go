@@ -112,6 +112,10 @@ func main() {
 					Usage: "-cmd=./cmd to build CLI package files into relative directory.",
 				},
 				cli.BoolFlag{
+					Name:  "rm,remove",
+					Usage: "-rm to delete package files after building binaries",
+				},
+				cli.BoolFlag{
 					Name:  "single,singlepkg",
 					Usage: "-singlePkg=true to only bundle seperate command binaries",
 				},
@@ -136,7 +140,12 @@ func main() {
 		{
 			Name:   "help",
 			Action: helpAction,
-			Flags:  []cli.Flag{},
+			Flags: []cli.Flag{
+				cli.BoolFlag{
+					Name:  "v,verbose",
+					Usage: "-verbose to show hidden logs and operations",
+				},
+			},
 		},
 		{
 			Name:   "version",
@@ -351,7 +360,7 @@ func buildAction(c *cli.Context) error {
 	}
 
 	// Build directories for commands.
-	directive, err := samurai.BuildPackage(events, events, targetDir, cmdDir, currentDir, binaryPath, skipBuild, c.Bool("singlepkg"), c.Bool("skipsub"), ctx)
+	directive, err := samurai.BuildPackage(events, events, targetDir, cmdDir, currentDir, binaryPath, skipBuild, c.Bool("remove"), c.Bool("singlepkg"), c.Bool("skipsub"), ctx)
 	if err != nil {
 		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
 		return err
