@@ -97,51 +97,68 @@ Shogun focuses on the execution of functions, that supports a limited set of for
 More so, to match needs of most with `Context` objects, the function formats support
 the usage of Context as first place arguments.
 
--	`func()`
-- `func() error`
+```go
+func()
+func() error
+```
 
-- `func(Context)`
-- `func(Context) error`
+```go
+func(Context)
+func(Context) error
+func(map[string]interface{})
+func(map[string]interface{}) error
+func(Context, map[string]interface{}) error
+```
 
-- `func(map[string]interface{})`
-- `func(map[string]interface{}) error`
-- `func(Context, map[string]interface{}) error`
+```go
+func(Struct)
+func(Struct) error
+func(Context, Struct) error
+func(Struct, io.WriteCloser) error
+func(Context, Struct, io.WriteCloser) error
+```
 
-- `func(Struct)`
-- `func(Struct) error`
-- `func(Context, Struct) error`
-- `func(Struct, io.WriteCloser) error`
-- `func(Context, Struct, io.WriteCloser) error`
+```go
+func(*Struct)
+func(*Struct) error
+func(Context, *Struct) error
+func(*Struct, io.WriteCloser) error
+func(Context, *Struct, io.WriteCloser) error
+```
 
-- `func(*Struct)`
-- `func(*Struct) error`
-- `func(Context, *Struct) error`
-- `func(*Struct, io.WriteCloser) error`
-- `func(Context, *Struct, io.WriteCloser) error`
+```go
+func(package.Struct)
+func(package.Struct) error
+func(Context, package.Struct) error
+func(package.Struct, io.WriteCloser) error
+func(Context, package.Struct, io.WriteCloser) error
+```
 
-- `func(package.Struct)`
-- `func(package.Struct) error`
-- `func(Context, package.Struct) error`
-- `func(package.Struct, io.WriteCloser) error`
-- `func(Context, package.Struct, io.WriteCloser) error`
+```go
+func(*package.Struct)
+func(*package.Struct) error
+func(Context, *package.Struct) error
+func(*package.Struct, io.WriteCloser) error
+func(Context, *package.Struct, io.WriteCloser) error
+```
 
-- `func(*package.Struct)`
-- `func(*package.Struct) error`
-- `func(Context, *package.Struct) error`
-- `func(*package.Struct, io.WriteCloser) error`
-- `func(Context, *package.Struct, io.WriteCloser) error`
+```go
+func(io.Reader)
+func(io.Reader) error
+func(Context, io.Reader) error
+```
 
-- `func(io.Reader)`
-- `func(io.Reader) error`
-- `func(Context, io.Reader) error`
+```go
+func(io.WriteCloser)
+func(io.WriteCloser) error
+func(Context, io.WriteCloser) error
+```
 
-- `func(io.WriteCloser)`
-- `func(io.WriteCloser) error`
-- `func(Context, io.WriteCloser) error`
-
-- `func(io.Reader, io.WriteCloser)`
-- `func(io.Reader, io.WriteCloser) error`
-- `func(Context, io.Reader, io.WriteCloser) error`
+```go
+func(io.Reader, io.WriteCloser)
+func(io.Reader, io.WriteCloser) error
+func(Context, io.Reader, io.WriteCloser) error
+```
 
 *Where `Context` => represents the context package used of the 3 allowed.*
 *Where `Struct`   => represents any struct declared in package*
