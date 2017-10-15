@@ -92,6 +92,10 @@ func main() {
 					Usage: "-dir=./example to set directory to scan for functions",
 				},
 				cli.BoolFlag{
+					Name:  "m,main",
+					Usage: "-main to force main as the package name",
+				},
+				cli.BoolFlag{
 					Name:  "v,verbose",
 					Usage: "-verbose to show hidden logs and operations",
 				},
@@ -168,13 +172,31 @@ func addAction(c *cli.Context) error {
 		return nil
 	}
 
+	events := metrics.New()
+
+	if c.Bool("verbose") {
+		events = metrics.New(custom.StackDisplay(os.Stdout))
+	}
+
+	currentDir, err := os.Getwd()
+	if err != nil {
+		events.Emit(metrics.Errorf("Failed to read current directory: %q", err))
+		return err
+	}
+
 	var packageName string
 
 	packageDir := c.String("dirName")
-	if packageDir == "" {
+	if packageDir == "" && c.Bool("main") {
 		packageName = "main"
-	} else {
+	}
+
+	if packageDir != "" && !c.Bool("main") {
 		packageName = toPackageName(packageDir)
+	}
+
+	if packageDir == "" && !c.Bool("main") {
+		packageName = filepath.Base(currentDir)
 	}
 
 	var directives []gen.WriteDirective
@@ -205,6 +227,7 @@ func addAction(c *cli.Context) error {
 	}
 
 	if err := ast.SimpleWriteDirectives("./", false, directives...); err != nil {
+		events.Emit(metrics.Errorf("Failed to create new file: %q", err))
 		return err
 	}
 
