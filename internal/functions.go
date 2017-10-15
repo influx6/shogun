@@ -16,9 +16,15 @@ const (
 	UnknownErrorReturn
 )
 
+// const for type export state.
+const (
+	UnExportedImport = iota + 5
+	ExportedImport
+)
+
 // consts for use or absence of context.
 const (
-	NoContext = iota + 5
+	NoContext = iota + 8
 	UseGoogleContext
 	UseFauxCancelContext
 	UseUnknownContext
@@ -26,7 +32,7 @@ const (
 
 // const for input state.
 const (
-	NoArgument                               = iota + 10 // is func()
+	NoArgument                               = iota + 15 // is func()
 	WithContextArgument                                  // is func(Context)
 	WithStringArgument                                   // is func(string)
 	WithMapArgument                                      // is func(map[string]interface{})
@@ -81,6 +87,12 @@ var (
 		"hasImportedArgument": func(d int) bool {
 			return d == WithImportedObjectArgument
 		},
+		"hasArgumentStructExported": func(d int) bool {
+			return d == ExportedImport
+		},
+		"hasArgumentStructUnexported": func(d int) bool {
+			return d == UnExportedImport
+		},
 		"hasStringArgumentWithWriter": func(d int) bool {
 			return d == WithStringArgumentAndWriteCloserArgument
 		},
@@ -101,13 +113,13 @@ var (
 
 // ShogunFunc defines a type which contains a function definition details.
 type ShogunFunc struct {
-	NS       string `json:"ns"`
-	Type     int    `json:"type"`
-	Return   int    `json:"return"`
-	Context  int    `json:"context"`
-	Name     string `json:"name"`
-	Source   string `json:"source"`
-	Function interface{}
+	NS       string      `json:"ns"`
+	Type     int         `json:"type"`
+	Return   int         `json:"return"`
+	Context  int         `json:"context"`
+	Name     string      `json:"name"`
+	Source   string      `json:"source"`
+	Function interface{} `json:"-"`
 }
 
 // VarMeta defines a struct to hold object details.
@@ -116,6 +128,7 @@ type VarMeta struct {
 	ImportNick string
 	Type       string
 	TypeAddr   string
+	Exported   int
 }
 
 // Function defines a struct type that represent meta details of a giving function.
@@ -123,6 +136,7 @@ type Function struct {
 	Context               int
 	Type                  int
 	Return                int
+	StructExported        int
 	Exported              bool
 	Default               bool
 	RealName              string

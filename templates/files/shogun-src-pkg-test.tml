@@ -1,0 +1,566 @@
+package pkg_test
+
+import (
+	"bytes"
+	gctx "context"
+	"encoding/json"
+	"fmt"
+	"io"
+	"testing"
+
+	{{quote .PkgPath}}
+	"github.com/influx6/faux/context"
+	"github.com/influx6/faux/tests"
+	"github.com/influx6/shogun/internal"
+	"github.com/influx6/shogun/internal/kensho"
+
+{{ range $_, $elem := .Main.Functions }}{{range $path, $nick := .Imports }}
+  {{$nick}} {{quote $path}}
+{{end}}{{end}}
+)
+
+{{ range $_, $elem := .Main.Functions }}{{range $elem.List}}
+{{if hasArgumentStructUnexported .StructExported }}
+func Test{{capitalize .Name}}(t *testing.T){
+	tests.Errored(`Unable to generate tests for {{quote .RealName}} due to unexported argument {{quote .Imports.Type}}`)
+}
+{{else}}
+{{if hasNoArgument .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  kensho.TestNoArgumentFunction(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+{{end}}
+{{if hasContextArgument .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  kensho.TestNoArgumentFunction(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+{{end}}
+{{if hasStringArgument .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  kensho.TestStringFunction(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+{{end}}
+{{if hasMapArgument .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  kensho.TestMapFunction(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+{{end}}
+{{if hasReadArgument .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  kensho.TestReaderFunction(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+{{end}}
+{{if hasWriteArgument .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  kensho.TestWriterFunction(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+{{end}}
+{{if hasStringArgumentWithWriter .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  kensho.TestStringWithWriterFunction(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+{{end}}
+{{if hasReadArgumentWithWriter .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  kensho.TestReaderWithWriterFunction(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+{{end}}
+{{if hasMapArgumentWithWriter .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  kensho.TestMapWithWriterFunction(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+{{end}}
+{{if hasStructArgument .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  test{{.Name}}Function(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+
+func test{{.Name}}Function(fun internal.ShogunFunc) {
+	var err error
+
+	defer func() {
+		if rec := recover(); rec != nil {
+			switch drec := rec.(type) {
+			case error:
+				err = drec
+			default:
+				err = fmt.Errorf("Recover Error: %+q", rec)
+			}
+		}
+	}()
+
+	var incoming bytes.Buffer
+	incoming.WriteString(`{"name":"Rock"}`)
+
+	realFunc := fun.Function.(func({{.Imports.Type}}))
+	realGCtxFunc := fun.Function.(func(gctx.Context, {{.Imports.Type}}))
+	realFCtxFunc := fun.Function.(func(context.CancelContext, {{.Imports.Type}}))
+
+	realFuncWithReturn := fun.Function.(func({{.Imports.Type}}) error)
+	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, {{.Imports.Type}}) error)
+	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, {{.Imports.Type}}) error)
+
+  {{if hasPrefix .Imports.Type "*"}}
+  var data {{ trimPrefix .Imports.Type "*"}}
+  {{else}}
+  var data {{.Imports.Type}}
+  {{end}}
+	if jserr := json.NewDecoder(&incoming).Decode(&data); jserr != nil {
+		tests.Failed("Function %q with alias %q failed StringOnlyFunction criterias: %+q", fun.Name, fun.NS, jserr)
+		return
+	}
+
+	switch fun.Context {
+	case internal.NoContext:
+		if fun.Return == internal.NoReturn {
+			realFunc({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+		}
+
+		if fun.Return == internal.ErrorReturn {
+			err = realFuncWithReturn({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+		}
+	case internal.UseGoogleContext:
+		err = execWithContext(func(ctx gctx.Context) error {
+			if fun.Return == internal.NoReturn {
+				realGCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+			}
+
+			if fun.Return == internal.ErrorReturn {
+				err = realGCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+			}
+
+			return nil
+		}, 0)
+	case internal.UseFauxCancelContext:
+		err = execWithContext(func(ctx context.CancelContext) error {
+			if fun.Return == internal.NoReturn {
+				realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+			}
+
+			if fun.Return == internal.ErrorReturn {
+				err = realFCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+			}
+
+			return nil
+		}, 0)
+	}
+
+	if err != nil {
+		tests.Failed("Function %q with alias %q failed StructFunction criterias: %+q", fun.Name, fun.NS, err)
+		return
+	}
+
+	tests.Passed("Function %q with alias %q passes StructFunction criterias", fun.Name, fun.NS)
+	return
+}
+{{end}}
+{{if hasImportedArgument .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  test{{.Name}}Function(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+
+func test{{.Name}}Function(fun internal.ShogunFunc) {
+	var err error
+
+	defer func() {
+		if rec := recover(); rec != nil {
+			switch drec := rec.(type) {
+			case error:
+				err = drec
+			default:
+				err = fmt.Errorf("Recover Error: %+q", rec)
+			}
+		}
+	}()
+
+	var incoming bytes.Buffer
+	incoming.WriteString(`{"name":"Rock"}`)
+
+	realFunc := fun.Function.(func({{.Imports.Type}}))
+	realGCtxFunc := fun.Function.(func(gctx.Context, {{.Imports.Type}}))
+	realFCtxFunc := fun.Function.(func(context.CancelContext, {{.Imports.Type}}))
+
+	realFuncWithReturn := fun.Function.(func({{.Imports.Type}}) error)
+	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, {{.Imports.Type}}) error)
+	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, {{.Imports.Type}}) error)
+
+  {{if hasPrefix .Imports.Type "*"}}
+  var data {{ trimPrefix .Imports.Type "*"}}
+  {{else}}
+  var data {{.Imports.Type}}
+  {{end}}
+	if jserr := json.NewDecoder(&incoming).Decode(&data); jserr != nil {
+		tests.Failed("Function %q with alias %q failed StringOnlyFunction criterias: %+q", fun.Name, fun.NS, jserr)
+		return
+	}
+
+	switch fun.Context {
+	case internal.NoContext:
+		if fun.Return == internal.NoReturn {
+			realFunc({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+		}
+
+		if fun.Return == internal.ErrorReturn {
+			err = realFuncWithReturn({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+		}
+	case internal.UseGoogleContext:
+		err = execWithContext(func(ctx gctx.Context) error {
+			if fun.Return == internal.NoReturn {
+				realGCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+			}
+
+			if fun.Return == internal.ErrorReturn {
+				err = realGCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+			}
+
+			return nil
+		}, 0)
+	case internal.UseFauxCancelContext:
+		err = execWithContext(func(ctx context.CancelContext) error {
+			if fun.Return == internal.NoReturn {
+				realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+			}
+
+			if fun.Return == internal.ErrorReturn {
+				err = realFCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+			}
+
+			return nil
+		}, 0)
+	}
+
+	if err != nil {
+		tests.Failed("Function %q with alias %q failed StructFunction criterias: %+q", fun.Name, fun.NS, err)
+		return
+	}
+
+	tests.Passed("Function %q with alias %q passes StructFunction criterias", fun.Name, fun.NS)
+	return
+}
+{{end}}
+{{if hasStructArgumentWithWriter .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  test{{.Name}}Function(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+
+func test{{capitalize .Name}}WithWriterFunction(fun internal.ShogunFunc) {
+	var err error
+
+	defer func() {
+		if rec := recover(); rec != nil {
+			switch drec := rec.(type) {
+			case error:
+				err = drec
+			default:
+				err = fmt.Errorf("Recover Error: %+q", rec)
+			}
+		}
+	}()
+
+	var incoming, outgoing bytes.Buffer
+	incoming.WriteString(`{"name":"Rock"}`)
+
+	realFunc := fun.Function.(func({{.Imports.Type}}, io.WriteCloser))
+	realGCtxFunc := fun.Function.(func(gctx.Context, {{.Imports.Type}}, io.WriteCloser))
+	realFCtxFunc := fun.Function.(func(context.CancelContext, {{.Imports.Type}}, io.WriteCloser))
+
+	realFuncWithReturn := fun.Function.(func({{.Imports.Type}}, io.WriteCloser) error)
+	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, {{.Imports.Type}}, io.WriteCloser) error)
+	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, {{.Imports.Type}}, io.WriteCloser) error)
+
+  {{if hasPrefix .Imports.Type "*"}}
+  var data {{ trimPrefix .Imports.Type "*"}}
+  {{else}}
+  var data {{.Imports.Type}}
+  {{end}}
+	if jserr := json.NewDecoder(&incoming).Decode(&data); jserr != nil {
+		tests.Failed("Function %q with alias %q failed StringOnlyFunction criterias: %+q", fun.Name, fun.NS, jserr)
+		return
+	}
+
+	switch fun.Context {
+	case internal.NoContext:
+		if fun.Return == internal.NoReturn {
+			realFunc({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
+		}
+
+		if fun.Return == internal.ErrorReturn {
+			err = realFuncWithReturn({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
+		}
+	case internal.UseGoogleContext:
+		err = execWithContext(func(ctx gctx.Context) error {
+			if fun.Return == internal.NoReturn {
+				realGCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
+			}
+
+			if fun.Return == internal.ErrorReturn {
+				err = realGCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
+			}
+
+			return nil
+		}, 0)
+	case internal.UseFauxCancelContext:
+		err = execWithContext(func(ctx context.CancelContext) error {
+			if fun.Return == internal.NoReturn {
+				realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
+			}
+
+			if fun.Return == internal.ErrorReturn {
+				err = realFCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
+			}
+
+			return nil
+		}, 0)
+	}
+
+	if err != nil {
+		tests.Failed("Function %q with alias %q failed StringOnlyFunction criterias: %+q", fun.Name, fun.NS, err)
+		return
+	}
+
+	if outgoing.Len() == 0 {
+		tests.Failed("Function %q with alias %q should have responded with output", fun.Name, fun.NS)
+	}
+
+	tests.Passed("Function %q with alias %q passes StringOnlyFunction criterias", fun.Name, fun.NS)
+	return
+}
+{{end}}
+{{if hasImportedArgumentWithWriter .Type }}
+func Test{{capitalize .Name}}(t *testing.T){
+  test{{.Name}}Function(internal.ShogunFunc{
+    Context: {{.Context}},
+    Type: {{.Type}},
+    Return: {{.Return}},
+    NS: {{quote .Name}},
+    Function: pkg.{{.RealName}},
+    Name: {{quote .RealName}},
+    Source: `{{.Source}}`,
+  })
+}
+
+func test{{capitalize .Name}}WithWriterFunction(fun internal.ShogunFunc) {
+	var err error
+
+	defer func() {
+		if rec := recover(); rec != nil {
+			switch drec := rec.(type) {
+			case error:
+				err = drec
+			default:
+				err = fmt.Errorf("Recover Error: %+q", rec)
+			}
+		}
+	}()
+
+	var incoming, outgoing bytes.Buffer
+	incoming.WriteString(`{"name":"Rock"}`)
+
+	realFunc := fun.Function.(func({{.Imports.Type}}, io.WriteCloser))
+	realGCtxFunc := fun.Function.(func(gctx.Context, {{.Imports.Type}}, io.WriteCloser))
+	realFCtxFunc := fun.Function.(func(context.CancelContext, {{.Imports.Type}}, io.WriteCloser))
+
+	realFuncWithReturn := fun.Function.(func({{.Imports.Type}}, io.WriteCloser) error)
+	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, {{.Imports.Type}}, io.WriteCloser) error)
+	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, {{.Imports.Type}}, io.WriteCloser) error)
+
+  {{if hasPrefix .Imports.Type "*"}}
+  var data {{ trimPrefix .Imports.Type "*"}}
+  {{else}}
+  var data {{.Imports.Type}}
+  {{end}}
+	if jserr := json.NewDecoder(&incoming).Decode(&data); jserr != nil {
+		tests.Failed("Function %q with alias %q failed StringOnlyFunction criterias: %+q", fun.Name, fun.NS, jserr)
+		return
+	}
+
+	switch fun.Context {
+	case internal.NoContext:
+		if fun.Return == internal.NoReturn {
+			realFunc({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
+		}
+
+		if fun.Return == internal.ErrorReturn {
+			err = realFuncWithReturn({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
+		}
+	case internal.UseGoogleContext:
+		err = execWithContext(func(ctx gctx.Context) error {
+			if fun.Return == internal.NoReturn {
+				realGCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
+			}
+
+			if fun.Return == internal.ErrorReturn {
+				err = realGCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
+			}
+
+			return nil
+		}, 0)
+	case internal.UseFauxCancelContext:
+		err = execWithContext(func(ctx context.CancelContext) error {
+			if fun.Return == internal.NoReturn {
+				realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
+			}
+
+			if fun.Return == internal.ErrorReturn {
+				err = realFCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
+			}
+
+			return nil
+		}, 0)
+	}
+
+	if err != nil {
+		tests.Failed("Function %q with alias %q failed StringOnlyFunction criterias: %+q", fun.Name, fun.NS, err)
+		return
+	}
+
+	if outgoing.Len() == 0 {
+		tests.Failed("Function %q with alias %q should have responded with output", fun.Name, fun.NS)
+	}
+
+	tests.Passed("Function %q with alias %q passes StringOnlyFunction criterias", fun.Name, fun.NS)
+	return
+}
+{{end}}
+{{end}}
+{{end}}
+{{end}}
+
+func execWithContext(fun interface{}, ctxTimeout time.Duration) error {
+	switch dfunc := fun.(type) {
+	case func(context.CancelContext) error:
+		var ctx context.CancelableContext
+
+		if ctxTimeout == 0 {
+			ctx = context.NewCnclContext()
+		} else {
+			ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+		}
+
+		defer ctx.Cancel()
+
+		return dfunc(ctx)
+	case func(gctx.Context) error:
+		var ctx gctx.Context
+		var canceller func()
+
+		if ctxTimeout == 0 {
+			ctx = gctx.Background()
+		} else {
+			ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+		}
+
+		if canceller != nil {
+			defer canceller()
+		}
+
+		return dfunc(ctx)
+	}
+
+	return errors.New("Unknown context type")
+}
+
+type wopCloser struct {
+	io.Writer
+}
+
+// Close does nothing.
+func (wopCloser) Close() error {
+	return nil
+}

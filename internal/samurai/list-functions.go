@@ -7,6 +7,7 @@ import (
 	"go/doc"
 	"os"
 	"strings"
+	"unicode"
 
 	"github.com/influx6/faux/metrics"
 	"github.com/influx6/faux/vfiles"
@@ -307,6 +308,7 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 	fn.PackageFile = function.FilePath
 	fn.PackageFileName = function.File
 	fn.Description = function.Comments
+	fn.StructExported = importList.Exported
 	fn.Synopses = doc.Synopsis(function.Comments)
 
 	if fn.Description == "" {
@@ -403,6 +405,15 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internal.VarMet
 				return internal.WithUnknownArgument, internal.VarMeta{}
 			}
 
+			if len(arg.Type) != 0 {
+				firstLetter := arg.Type[0]
+				if unicode.IsLower(rune(firstLetter)) {
+					params.Exported = internal.UnExportedImport
+				} else {
+					params.Exported = internal.ExportedImport
+				}
+			}
+
 			if arg2 == nil {
 				return internal.WithImportedObjectArgument, params
 			}
@@ -413,6 +424,15 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internal.VarMet
 		}
 
 		if arg.StructObject != nil {
+			if len(arg.Type) != 0 {
+				firstLetter := arg.Type[0]
+				if unicode.IsLower(rune(firstLetter)) {
+					params.Exported = internal.UnExportedImport
+				} else {
+					params.Exported = internal.ExportedImport
+				}
+			}
+
 			if arg2 == nil {
 				return internal.WithStructArgument, params
 			}

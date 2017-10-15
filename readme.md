@@ -92,10 +92,20 @@ the usage of Context as first place arguments.
 - `func(Struct, io.WriteCloser) error`
 - `func(Context, Struct, io.WriteCloser) error`
 
-- `func(package.Type) error`
-- `func(Context, package.Type) error`
-- `func(Struct, io.WriteCloser) error`
-- `func(Context, package.Type, io.WriteCloser) error`
+- `func(*Struct) error`
+- `func(Context, *Struct) error`
+- `func(*Struct, io.WriteCloser) error`
+- `func(Context, *Struct, io.WriteCloser) error`
+
+- `func(package.Struct) error`
+- `func(Context, package.Struct) error`
+- `func(package.Struct, io.WriteCloser) error`
+- `func(Context, package.Struct, io.WriteCloser) error`
+
+- `func(*package.Struct) error`
+- `func(Context, *package.Struct) error`
+- `func(*package.Struct, io.WriteCloser) error`
+- `func(Context, *package.Struct, io.WriteCloser) error`
 
 - `func(io.Reader) error`
 - `func(io.Reader, io.WriteCloser) error`
@@ -220,5 +230,5 @@ echo "We lost the war" | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 - Run function of package binary shogun files with json input
 
 ```bash
-{"name":"bat"} | shogun {{BINARYNAME}} {{FUNCTIONNAME}} 
+{"name":"bat"} | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 ```

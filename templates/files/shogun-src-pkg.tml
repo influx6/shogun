@@ -57,7 +57,7 @@ func MainShogunMeta(cmd string, args []string) (internal.ShogunFunc, error) {
           NS: {{quote .Name}},
           Function: {{.RealName}},
           Name: {{quote .RealName}},
-          Source: {{quote .Source}},
+          Source: `{{.Source}}`,
         }, nil
     {{end}}
     {{end}}
@@ -785,6 +785,9 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
     {{end}}
     {{end}}
     default:
+      {{if equal (len .Main.Default) 0}}
+        return nil
+      {{else}}
       {{range .Main.Default}}
           {{if hasNoArgument .Type }}
               {{if usesNoContext .Context }}
@@ -1370,8 +1373,8 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
               {{end}}
           {{end}}
       {{end}}
+      {{end}}
   }
-  return nil
 }
 
 // MainShogunHelp display help message for executable commands and subcommands.

@@ -242,7 +242,7 @@ func mainAction(c *cli.Context) error {
 		exec.Command("%s/%s %s", binaryPath, c.Args().First(), strings.Join(c.Args().Tail(), " ")),
 		exec.Output(&response),
 		exec.Err(&responseErr),
-		exec.Input(os.Stdout),
+		exec.Input(os.Stdin),
 	)
 
 	if err := binCmd.Exec(context.Background(), events); err != nil {

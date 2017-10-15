@@ -261,6 +261,27 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 	list.BasePkgPath = packageBinaryPath
 
 	list.List = append(list.List, gen.WriteDirective{
+		FileName: "pkg_test.go",
+		Dir:      packageBinaryFilePath,
+		Writer: fmtwriter.NewWith(vlog, gen.SourceTextWithName(
+			"shogun:src-pkg-test",
+			string(templates.Must("shogun-src-pkg-test.tml")),
+			internal.ArgumentFunctions,
+			struct {
+				PkgPath    string
+				BinaryName string
+				Subs       map[string]BuildList
+				Main       BuildList
+			}{
+				PkgPath:    totalPackagePath,
+				BinaryName: binaryName,
+				Main:       list,
+				Subs:       subs,
+			},
+		), true, true),
+	})
+
+	list.List = append(list.List, gen.WriteDirective{
 		FileName: fmt.Sprintf("pkg_%s.go", binaryFileName(binaryName)),
 		Dir:      packageBinaryFilePath,
 		Writer: fmtwriter.NewWith(vlog, gen.SourceTextWithName(
@@ -388,7 +409,11 @@ func binaryFileName(name string) string {
 func binHash(nlog metrics.Metrics, binPath string) (string, error) {
 	var response bytes.Buffer
 
-	if err := exec.New(exec.Command("%s hash", binPath), exec.Async(), exec.Output(&response)).Exec(context.Background(), nlog); err != nil {
+	if err := exec.New(
+		exec.Command("%s hash", binPath),
+		exec.Async(),
+		exec.Output(&response),
+	).Exec(context.Background(), nlog); err != nil {
 		return "", err
 	}
 
