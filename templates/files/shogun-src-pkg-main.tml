@@ -57,7 +57,7 @@ func main(){
 func helpAction(c *cli.Context) error {
 	if c.NArg() == 0 {
 		 fmt.Println(helpMessage)
-	 return nil
+		 return nil
 	}
 
 	return pkg.MainShogunHelp(
@@ -78,6 +78,10 @@ func mainAction(c *cli.Context) error {
 		wopCloser{Writer: os.Stdout},
 		tm,
 	); err != nil {
+		if err == pkg.ErrNoDefault {
+		 fmt.Println(helpMessage)
+		 return nil
+		}
 		if jserr := json.NewEncoder(os.Stderr).Encode(struct{
 			Err error `json:"error"`
 			Method string `json:"method"`

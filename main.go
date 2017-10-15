@@ -5,10 +5,10 @@ package main
 import (
 	"bytes"
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	gexec "os/exec"
 	"path/filepath"
 	"regexp"
 	"runtime"
@@ -74,7 +74,7 @@ func main() {
 			Action: addAction,
 			Flags: []cli.Flag{
 				cli.StringFlag{
-					Name:  "dn,dirName",
+					Name:  "dir,dirName",
 					Usage: "-dirName=bob-build set the name of directory and package",
 				},
 				cli.BoolFlag{
@@ -150,7 +150,13 @@ func main() {
 
 func addAction(c *cli.Context) error {
 	if c.NArg() == 0 {
-		return errors.New("You are required to supply spaced names of files .e.g signup.go signin.go run.go")
+		fmt.Printf("⠙ Run `shogun add bob.go` to add `bob.go` to root directory\n")
+		fmt.Printf("⠙ Run `shogun add -dir=voz bob.go` to add `bob.go` to `voz` directory\n")
+		fmt.Printf("⠙ Run `shogun add -dir=voz bob.go dog.go` to add `bob.go` and `dog.go` to `voz` directory\n")
+		fmt.Printf("⠙ Run `shogun add -dir=voz bob.go ...[filenames]` to add more files to `voz` directory\n\n")
+
+		fmt.Println("⡿ Run `shogun help` to see what it takes to make me work.")
+		return nil
 	}
 
 	var packageName string
@@ -198,6 +204,7 @@ func addAction(c *cli.Context) error {
 
 func helpAction(c *cli.Context) error {
 	if c.NArg() == 0 || c.Args().First() == "" {
+		fmt.Println("⡿ Run `shogun help` to see what it takes to make me work.")
 		return nil
 	}
 
@@ -205,6 +212,10 @@ func helpAction(c *cli.Context) error {
 
 	if c.Bool("verbose") {
 		events = metrics.New(custom.StackDisplay(os.Stdout))
+	}
+
+	if _, err := gexec.LookPath(c.Args().First()); err != nil {
+		return fmt.Errorf("%q binary not ready yet, run `shogun build` first", c.Args().First())
 	}
 
 	binaryPath := binPath()

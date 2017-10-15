@@ -21,7 +21,9 @@ import (
 {{end}}
 )
 
+// vars ...
 var (
+  ErrNoDefault = errors.New("No default command")
   subCommands = map[string]bool{ {{ range $_, $sub := .Subs}}
     {{ quote $sub.BinaryName}}: true,
 {{end}} }
@@ -786,7 +788,7 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
     {{end}}
     default:
       {{if equal (len .Main.Default) 0}}
-        return nil
+        return ErrNoDefault
       {{else}}
       {{range .Main.Default}}
           {{if hasNoArgument .Type }}
