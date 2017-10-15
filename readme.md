@@ -304,4 +304,4 @@ echo "We lost the war" | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 ```
 
 ## Contributions
-Contributions are welcome, do please checkout our [Contribution Guidlines](./contrib.md).
+Contributions are welcome, do please checkout the [Contribution Guidlines](./contrib.md).
