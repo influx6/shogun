@@ -22,7 +22,7 @@ import (
 	"github.com/influx6/gobuild/build"
 	"github.com/influx6/moz/ast"
 	"github.com/influx6/moz/gen"
-	"github.com/influx6/shogun/internal/samurai"
+	"github.com/influx6/shogun/internals/samurai"
 	"github.com/influx6/shogun/templates"
 	"github.com/minio/cli"
 )

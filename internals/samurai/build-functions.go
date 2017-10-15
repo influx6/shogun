@@ -23,7 +23,7 @@ import (
 	"github.com/influx6/gobuild/srcpath"
 	"github.com/influx6/moz/ast"
 	"github.com/influx6/moz/gen"
-	"github.com/influx6/shogun/internal"
+	"github.com/influx6/shogun/internals"
 	"github.com/influx6/shogun/templates"
 )
 
@@ -104,11 +104,11 @@ type BuildList struct {
 	Desc            string
 	ExecBinaryName  string
 	List            []gen.WriteDirective
-	Functions       []internal.PackageFunctions
+	Functions       []internals.PackageFunctions
 }
 
 // Default returns the associated function set as default.
-func (pn BuildList) Default() []internal.Function {
+func (pn BuildList) Default() []internals.Function {
 	for _, fm := range pn.Functions {
 		if res := fm.Default(); len(res) != 0 {
 			return res
@@ -216,7 +216,7 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 		return list, fmt.Errorf("Expected package should be located in GOPATH/src: %+q", err)
 	}
 
-	var fnPkg internal.PackageFunctions
+	var fnPkg internals.PackageFunctions
 	fnPkg.Desc = binaryDesc
 	fnPkg.Name = pkgItem.Name
 	fnPkg.Path = pkgItem.Path
@@ -271,7 +271,7 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 		Writer: fmtwriter.NewWith(vlog, gen.SourceTextWithName(
 			"shogun:src-pkg-test",
 			string(templates.Must("shogun-src-pkg-test.tml")),
-			internal.ArgumentFunctions,
+			internals.ArgumentFunctions,
 			struct {
 				PkgPath    string
 				BinaryName string
@@ -292,7 +292,7 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 		Writer: fmtwriter.NewWith(vlog, gen.SourceTextWithName(
 			"shogun:src-pkg",
 			string(templates.Must("shogun-src-pkg.tml")),
-			internal.ArgumentFunctions,
+			internals.ArgumentFunctions,
 			struct {
 				BinaryName string
 				Subs       map[string]BuildList

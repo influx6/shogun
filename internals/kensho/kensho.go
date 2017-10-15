@@ -13,11 +13,11 @@ import (
 
 	"github.com/influx6/faux/context"
 	"github.com/influx6/faux/tests"
-	"github.com/influx6/shogun/internal"
+	"github.com/influx6/shogun/internals"
 )
 
 // TestWriterFunction validates the behaviour of a function that expects a writer argument.
-func TestWriterFunction(fun internal.ShogunFunc) {
+func TestWriterFunction(fun internals.ShogunFunc) {
 	var err error
 
 	defer func() {
@@ -42,33 +42,33 @@ func TestWriterFunction(fun internal.ShogunFunc) {
 	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, io.WriteCloser) error)
 
 	switch fun.Context {
-	case internal.NoContext:
-		if fun.Return == internal.NoReturn {
+	case internals.NoContext:
+		if fun.Return == internals.NoReturn {
 			realFunc(wopCloser{Writer: &outgoing})
 		}
 
-		if fun.Return == internal.ErrorReturn {
+		if fun.Return == internals.ErrorReturn {
 			err = realFuncWithReturn(wopCloser{Writer: &outgoing})
 		}
-	case internal.UseGoogleContext:
+	case internals.UseGoogleContext:
 		err = execWithContext(func(ctx gctx.Context) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, wopCloser{Writer: &outgoing})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx, wopCloser{Writer: &outgoing})
 			}
 
 			return nil
 		}, 0)
-	case internal.UseFauxCancelContext:
+	case internals.UseFauxCancelContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, wopCloser{Writer: &outgoing})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realFCtxFuncWithReturn(ctx, wopCloser{Writer: &outgoing})
 			}
 
@@ -85,7 +85,7 @@ func TestWriterFunction(fun internal.ShogunFunc) {
 }
 
 // TestReaderFunction validates the behaviour of a function that expects a reader argument.
-func TestReaderFunction(fun internal.ShogunFunc) {
+func TestReaderFunction(fun internals.ShogunFunc) {
 	var err error
 
 	defer func() {
@@ -111,33 +111,33 @@ func TestReaderFunction(fun internal.ShogunFunc) {
 	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, io.Reader) error)
 
 	switch fun.Context {
-	case internal.NoContext:
-		if fun.Return == internal.NoReturn {
+	case internals.NoContext:
+		if fun.Return == internals.NoReturn {
 			realFunc(&incoming)
 		}
 
-		if fun.Return == internal.ErrorReturn {
+		if fun.Return == internals.ErrorReturn {
 			err = realFuncWithReturn(&incoming)
 		}
-	case internal.UseGoogleContext:
+	case internals.UseGoogleContext:
 		err = execWithContext(func(ctx gctx.Context) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, &incoming)
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx, &incoming)
 			}
 
 			return nil
 		}, 0)
-	case internal.UseFauxCancelContext:
+	case internals.UseFauxCancelContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, &incoming)
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realFCtxFuncWithReturn(ctx, &incoming)
 			}
 
@@ -155,7 +155,7 @@ func TestReaderFunction(fun internal.ShogunFunc) {
 }
 
 // TestReaderWithWriterFunction validates the behaviour of a function that expects a reader and WriteCloser argument.
-func TestReaderWithWriterFunction(fun internal.ShogunFunc) {
+func TestReaderWithWriterFunction(fun internals.ShogunFunc) {
 	var err error
 
 	defer func() {
@@ -181,33 +181,33 @@ func TestReaderWithWriterFunction(fun internal.ShogunFunc) {
 	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, io.Reader, io.WriteCloser) error)
 
 	switch fun.Context {
-	case internal.NoContext:
-		if fun.Return == internal.NoReturn {
+	case internals.NoContext:
+		if fun.Return == internals.NoReturn {
 			realFunc(&incoming, wopCloser{Writer: &outgoing})
 		}
 
-		if fun.Return == internal.ErrorReturn {
+		if fun.Return == internals.ErrorReturn {
 			err = realFuncWithReturn(&incoming, wopCloser{Writer: &outgoing})
 		}
-	case internal.UseGoogleContext:
+	case internals.UseGoogleContext:
 		err = execWithContext(func(ctx gctx.Context) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, &incoming, wopCloser{Writer: &outgoing})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx, &incoming, wopCloser{Writer: &outgoing})
 			}
 
 			return nil
 		}, 0)
-	case internal.UseFauxCancelContext:
+	case internals.UseFauxCancelContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, &incoming, wopCloser{Writer: &outgoing})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realFCtxFuncWithReturn(ctx, &incoming, wopCloser{Writer: &outgoing})
 			}
 
@@ -229,7 +229,7 @@ func TestReaderWithWriterFunction(fun internal.ShogunFunc) {
 }
 
 // TestMapFunction validates the behaviour of a function that expects a map argument.
-func TestMapFunction(fun internal.ShogunFunc) {
+func TestMapFunction(fun internals.ShogunFunc) {
 	var err error
 
 	defer func() {
@@ -261,33 +261,33 @@ func TestMapFunction(fun internal.ShogunFunc) {
 	}
 
 	switch fun.Context {
-	case internal.NoContext:
-		if fun.Return == internal.NoReturn {
+	case internals.NoContext:
+		if fun.Return == internals.NoReturn {
 			realFunc(data)
 		}
 
-		if fun.Return == internal.ErrorReturn {
+		if fun.Return == internals.ErrorReturn {
 			err = realFuncWithReturn(data)
 		}
-	case internal.UseGoogleContext:
+	case internals.UseGoogleContext:
 		err = execWithContext(func(ctx gctx.Context) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, data)
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx, data)
 			}
 
 			return nil
 		}, 0)
-	case internal.UseFauxCancelContext:
+	case internals.UseFauxCancelContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, data)
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realFCtxFuncWithReturn(ctx, data)
 			}
 
@@ -305,7 +305,7 @@ func TestMapFunction(fun internal.ShogunFunc) {
 }
 
 // TestMapWithWriterFunction validates the behaviour of a function that expects a string argument.
-func TestMapWithWriterFunction(fun internal.ShogunFunc) {
+func TestMapWithWriterFunction(fun internals.ShogunFunc) {
 	var err error
 
 	defer func() {
@@ -337,33 +337,33 @@ func TestMapWithWriterFunction(fun internal.ShogunFunc) {
 	}
 
 	switch fun.Context {
-	case internal.NoContext:
-		if fun.Return == internal.NoReturn {
+	case internals.NoContext:
+		if fun.Return == internals.NoReturn {
 			realFunc(data, wopCloser{Writer: &outgoing})
 		}
 
-		if fun.Return == internal.ErrorReturn {
+		if fun.Return == internals.ErrorReturn {
 			err = realFuncWithReturn(data, wopCloser{Writer: &outgoing})
 		}
-	case internal.UseGoogleContext:
+	case internals.UseGoogleContext:
 		err = execWithContext(func(ctx gctx.Context) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, data, wopCloser{Writer: &outgoing})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx, data, wopCloser{Writer: &outgoing})
 			}
 
 			return nil
 		}, 0)
-	case internal.UseFauxCancelContext:
+	case internals.UseFauxCancelContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, data, wopCloser{Writer: &outgoing})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realFCtxFuncWithReturn(ctx, data, wopCloser{Writer: &outgoing})
 			}
 
@@ -385,7 +385,7 @@ func TestMapWithWriterFunction(fun internal.ShogunFunc) {
 }
 
 // TestNoArgumentFunction validates the behaviour of a function that expects no argument.
-func TestNoArgumentFunction(fun internal.ShogunFunc) {
+func TestNoArgumentFunction(fun internals.ShogunFunc) {
 	var err error
 
 	defer func() {
@@ -408,33 +408,33 @@ func TestNoArgumentFunction(fun internal.ShogunFunc) {
 	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext) error)
 
 	switch fun.Context {
-	case internal.NoContext:
-		if fun.Return == internal.NoReturn {
+	case internals.NoContext:
+		if fun.Return == internals.NoReturn {
 			realFunc()
 		}
 
-		if fun.Return == internal.ErrorReturn {
+		if fun.Return == internals.ErrorReturn {
 			err = realFuncWithReturn()
 		}
-	case internal.UseGoogleContext:
+	case internals.UseGoogleContext:
 		err = execWithContext(func(ctx gctx.Context) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx)
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx)
 			}
 
 			return nil
 		}, 0)
-	case internal.UseFauxCancelContext:
+	case internals.UseFauxCancelContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx)
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realFCtxFuncWithReturn(ctx)
 			}
 
@@ -452,7 +452,7 @@ func TestNoArgumentFunction(fun internal.ShogunFunc) {
 }
 
 // TestStringFunction validates the behaviour of a function that expects a string argument.
-func TestStringFunction(fun internal.ShogunFunc) {
+func TestStringFunction(fun internals.ShogunFunc) {
 	var err error
 
 	defer func() {
@@ -478,33 +478,33 @@ func TestStringFunction(fun internal.ShogunFunc) {
 	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, string) error)
 
 	switch fun.Context {
-	case internal.NoContext:
-		if fun.Return == internal.NoReturn {
+	case internals.NoContext:
+		if fun.Return == internals.NoReturn {
 			realFunc(incoming.String())
 		}
 
-		if fun.Return == internal.ErrorReturn {
+		if fun.Return == internals.ErrorReturn {
 			err = realFuncWithReturn(incoming.String())
 		}
-	case internal.UseGoogleContext:
+	case internals.UseGoogleContext:
 		err = execWithContext(func(ctx gctx.Context) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, incoming.String())
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx, incoming.String())
 			}
 
 			return nil
 		}, 0)
-	case internal.UseFauxCancelContext:
+	case internals.UseFauxCancelContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, incoming.String())
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realFCtxFuncWithReturn(ctx, incoming.String())
 			}
 
@@ -522,7 +522,7 @@ func TestStringFunction(fun internal.ShogunFunc) {
 }
 
 // TestStringWithWriterFunction validates the behaviour of a function that expects a string argument.
-func TestStringWithWriterFunction(fun internal.ShogunFunc) {
+func TestStringWithWriterFunction(fun internals.ShogunFunc) {
 	var err error
 
 	defer func() {
@@ -548,33 +548,33 @@ func TestStringWithWriterFunction(fun internal.ShogunFunc) {
 	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, string, io.WriteCloser) error)
 
 	switch fun.Context {
-	case internal.NoContext:
-		if fun.Return == internal.NoReturn {
+	case internals.NoContext:
+		if fun.Return == internals.NoReturn {
 			realFunc(incoming.String(), wopCloser{Writer: &outgoing})
 		}
 
-		if fun.Return == internal.ErrorReturn {
+		if fun.Return == internals.ErrorReturn {
 			err = realFuncWithReturn(incoming.String(), wopCloser{Writer: &outgoing})
 		}
-	case internal.UseGoogleContext:
+	case internals.UseGoogleContext:
 		err = execWithContext(func(ctx gctx.Context) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, incoming.String(), wopCloser{Writer: &outgoing})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx, incoming.String(), wopCloser{Writer: &outgoing})
 			}
 
 			return nil
 		}, 0)
-	case internal.UseFauxCancelContext:
+	case internals.UseFauxCancelContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, incoming.String(), wopCloser{Writer: &outgoing})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realFCtxFuncWithReturn(ctx, incoming.String(), wopCloser{Writer: &outgoing})
 			}
 

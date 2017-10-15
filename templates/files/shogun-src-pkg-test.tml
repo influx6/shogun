@@ -11,8 +11,8 @@ import (
 	{{quote .PkgPath}}
 	"github.com/influx6/faux/context"
 	"github.com/influx6/faux/tests"
-	"github.com/influx6/shogun/internal"
-	"github.com/influx6/shogun/internal/kensho"
+	"github.com/influx6/shogun/internals"
+	"github.com/influx6/shogun/internals/kensho"
 
 {{ range $_, $elem := .Main.Functions }}{{range $path, $nick := .Imports }}
   {{$nick}} {{quote $path}}
@@ -27,7 +27,7 @@ func Test{{capitalize .Name}}(t *testing.T){
 {{else}}
 {{if hasNoArgument .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  kensho.TestNoArgumentFunction(internal.ShogunFunc{
+  kensho.TestNoArgumentFunction(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -40,7 +40,7 @@ func Test{{capitalize .Name}}(t *testing.T){
 {{end}}
 {{if hasContextArgument .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  kensho.TestNoArgumentFunction(internal.ShogunFunc{
+  kensho.TestNoArgumentFunction(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -53,7 +53,7 @@ func Test{{capitalize .Name}}(t *testing.T){
 {{end}}
 {{if hasStringArgument .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  kensho.TestStringFunction(internal.ShogunFunc{
+  kensho.TestStringFunction(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -66,7 +66,7 @@ func Test{{capitalize .Name}}(t *testing.T){
 {{end}}
 {{if hasMapArgument .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  kensho.TestMapFunction(internal.ShogunFunc{
+  kensho.TestMapFunction(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -79,7 +79,7 @@ func Test{{capitalize .Name}}(t *testing.T){
 {{end}}
 {{if hasReadArgument .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  kensho.TestReaderFunction(internal.ShogunFunc{
+  kensho.TestReaderFunction(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -92,7 +92,7 @@ func Test{{capitalize .Name}}(t *testing.T){
 {{end}}
 {{if hasWriteArgument .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  kensho.TestWriterFunction(internal.ShogunFunc{
+  kensho.TestWriterFunction(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -105,7 +105,7 @@ func Test{{capitalize .Name}}(t *testing.T){
 {{end}}
 {{if hasStringArgumentWithWriter .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  kensho.TestStringWithWriterFunction(internal.ShogunFunc{
+  kensho.TestStringWithWriterFunction(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -118,7 +118,7 @@ func Test{{capitalize .Name}}(t *testing.T){
 {{end}}
 {{if hasReadArgumentWithWriter .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  kensho.TestReaderWithWriterFunction(internal.ShogunFunc{
+  kensho.TestReaderWithWriterFunction(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -131,7 +131,7 @@ func Test{{capitalize .Name}}(t *testing.T){
 {{end}}
 {{if hasMapArgumentWithWriter .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  kensho.TestMapWithWriterFunction(internal.ShogunFunc{
+  kensho.TestMapWithWriterFunction(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -144,7 +144,7 @@ func Test{{capitalize .Name}}(t *testing.T){
 {{end}}
 {{if hasStructArgument .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  test{{.Name}}Function(internal.ShogunFunc{
+  test{{.Name}}Function(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -155,7 +155,7 @@ func Test{{capitalize .Name}}(t *testing.T){
   })
 }
 
-func test{{.Name}}Function(fun internal.ShogunFunc) {
+func test{{.Name}}Function(fun internals.ShogunFunc) {
 	var err error
 
 	defer func() {
@@ -191,33 +191,33 @@ func test{{.Name}}Function(fun internal.ShogunFunc) {
 	}
 
 	switch fun.Context {
-	case internal.NoContext:
-		if fun.Return == internal.NoReturn {
+	case internals.NoContext:
+		if fun.Return == internals.NoReturn {
 			realFunc({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 		}
 
-		if fun.Return == internal.ErrorReturn {
+		if fun.Return == internals.ErrorReturn {
 			err = realFuncWithReturn({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 		}
-	case internal.UseGoogleContext:
+	case internals.UseGoogleContext:
 		err = execWithContext(func(ctx gctx.Context) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 			}
 
 			return nil
 		}, 0)
-	case internal.UseFauxCancelContext:
+	case internals.UseFauxCancelContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realFCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 			}
 
@@ -236,7 +236,7 @@ func test{{.Name}}Function(fun internal.ShogunFunc) {
 {{end}}
 {{if hasImportedArgument .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  test{{.Name}}Function(internal.ShogunFunc{
+  test{{.Name}}Function(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -247,7 +247,7 @@ func Test{{capitalize .Name}}(t *testing.T){
   })
 }
 
-func test{{.Name}}Function(fun internal.ShogunFunc) {
+func test{{.Name}}Function(fun internals.ShogunFunc) {
 	var err error
 
 	defer func() {
@@ -283,33 +283,33 @@ func test{{.Name}}Function(fun internal.ShogunFunc) {
 	}
 
 	switch fun.Context {
-	case internal.NoContext:
-		if fun.Return == internal.NoReturn {
+	case internals.NoContext:
+		if fun.Return == internals.NoReturn {
 			realFunc({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 		}
 
-		if fun.Return == internal.ErrorReturn {
+		if fun.Return == internals.ErrorReturn {
 			err = realFuncWithReturn({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 		}
-	case internal.UseGoogleContext:
+	case internals.UseGoogleContext:
 		err = execWithContext(func(ctx gctx.Context) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 			}
 
 			return nil
 		}, 0)
-	case internal.UseFauxCancelContext:
+	case internals.UseFauxCancelContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realFCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 			}
 
@@ -328,7 +328,7 @@ func test{{.Name}}Function(fun internal.ShogunFunc) {
 {{end}}
 {{if hasStructArgumentWithWriter .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  test{{.Name}}Function(internal.ShogunFunc{
+  test{{.Name}}Function(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -339,7 +339,7 @@ func Test{{capitalize .Name}}(t *testing.T){
   })
 }
 
-func test{{capitalize .Name}}WithWriterFunction(fun internal.ShogunFunc) {
+func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 	var err error
 
 	defer func() {
@@ -375,33 +375,33 @@ func test{{capitalize .Name}}WithWriterFunction(fun internal.ShogunFunc) {
 	}
 
 	switch fun.Context {
-	case internal.NoContext:
-		if fun.Return == internal.NoReturn {
+	case internals.NoContext:
+		if fun.Return == internals.NoReturn {
 			realFunc({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 		}
 
-		if fun.Return == internal.ErrorReturn {
+		if fun.Return == internals.ErrorReturn {
 			err = realFuncWithReturn({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 		}
-	case internal.UseGoogleContext:
+	case internals.UseGoogleContext:
 		err = execWithContext(func(ctx gctx.Context) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 			}
 
 			return nil
 		}, 0)
-	case internal.UseFauxCancelContext:
+	case internals.UseFauxCancelContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realFCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 			}
 
@@ -424,7 +424,7 @@ func test{{capitalize .Name}}WithWriterFunction(fun internal.ShogunFunc) {
 {{end}}
 {{if hasImportedArgumentWithWriter .Type }}
 func Test{{capitalize .Name}}(t *testing.T){
-  test{{.Name}}Function(internal.ShogunFunc{
+  test{{.Name}}Function(internals.ShogunFunc{
     Context: {{.Context}},
     Type: {{.Type}},
     Return: {{.Return}},
@@ -435,7 +435,7 @@ func Test{{capitalize .Name}}(t *testing.T){
   })
 }
 
-func test{{capitalize .Name}}WithWriterFunction(fun internal.ShogunFunc) {
+func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 	var err error
 
 	defer func() {
@@ -471,33 +471,33 @@ func test{{capitalize .Name}}WithWriterFunction(fun internal.ShogunFunc) {
 	}
 
 	switch fun.Context {
-	case internal.NoContext:
-		if fun.Return == internal.NoReturn {
+	case internals.NoContext:
+		if fun.Return == internals.NoReturn {
 			realFunc({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 		}
 
-		if fun.Return == internal.ErrorReturn {
+		if fun.Return == internals.ErrorReturn {
 			err = realFuncWithReturn({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 		}
-	case internal.UseGoogleContext:
+	case internals.UseGoogleContext:
 		err = execWithContext(func(ctx gctx.Context) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 			}
 
 			return nil
 		}, 0)
-	case internal.UseFauxCancelContext:
+	case internals.UseFauxCancelContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
-			if fun.Return == internal.NoReturn {
+			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 			}
 
-			if fun.Return == internal.ErrorReturn {
+			if fun.Return == internals.ErrorReturn {
 				err = realFCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 			}
 

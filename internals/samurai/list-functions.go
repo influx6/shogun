@@ -15,7 +15,7 @@ import (
 	"github.com/influx6/gobuild/srcpath"
 	"github.com/influx6/moz/ast"
 	"github.com/influx6/moz/gen"
-	"github.com/influx6/shogun/internal"
+	"github.com/influx6/shogun/internals"
 	"github.com/influx6/shogun/templates"
 )
 
@@ -85,7 +85,7 @@ type PackageFunctionList struct {
 	Package string
 	Name    string
 	Desc    string
-	List    []internal.PackageFunctions
+	List    []internals.PackageFunctions
 }
 
 // ListFunctionsForDir iterates all directories and retrieves functon list of all declared functions
@@ -154,8 +154,8 @@ func ListFunctionsForDir(vlog, events metrics.Metrics, dir string, ctx build.Con
 	return pkgFuncs, nil
 }
 
-func pullFunctions(pkg ast.Package) (internal.PackageFunctions, error) {
-	var fnPkg internal.PackageFunctions
+func pullFunctions(pkg ast.Package) (internals.PackageFunctions, error) {
+	var fnPkg internals.PackageFunctions
 	fnPkg.Name = pkg.Name
 	fnPkg.Path = pkg.Path
 	fnPkg.FilePath = pkg.FilePath
@@ -203,8 +203,8 @@ func pullFunctions(pkg ast.Package) (internal.PackageFunctions, error) {
 }
 
 // pullFunctionFromDeclr returns all function details within the giving PackageDeclaration.
-func pullFunctionFromDeclr(pkg ast.Package, declr *ast.PackageDeclaration) ([]internal.Function, error) {
-	var list []internal.Function
+func pullFunctionFromDeclr(pkg ast.Package, declr *ast.PackageDeclaration) ([]internals.Function, error) {
+	var list []internals.Function
 
 	for _, function := range declr.Functions {
 		fn, ignore, err := pullFunction(&function, declr)
@@ -222,8 +222,8 @@ func pullFunctionFromDeclr(pkg ast.Package, declr *ast.PackageDeclaration) ([]in
 	return list, nil
 }
 
-func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) (internal.Function, bool, error) {
-	var fn internal.Function
+func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) (internals.Function, bool, error) {
+	var fn internals.Function
 
 	if !function.Exported {
 		return fn, true, nil
@@ -245,31 +245,31 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 	var argumentType int
 	var contextType int
 
-	var importList, ctxImport internal.VarMeta
+	var importList, ctxImport internals.VarMeta
 
 	switch retLen {
 	case 0:
-		returnType = internal.NoReturn
+		returnType = internals.NoReturn
 	case 1:
 		returnType = getReturnState(def.Returns[0])
 	}
 
 	switch argLen {
 	case 0:
-		contextType = internal.NoContext
-		argumentType = internal.NoArgument
+		contextType = internals.NoContext
+		argumentType = internals.NoArgument
 	case 1:
 		contextType, ctxImport = getContextState(def.Args[0])
-		if contextType == internal.UseUnknownContext {
-			contextType = internal.NoContext
+		if contextType == internals.UseUnknownContext {
+			contextType = internals.NoContext
 			argumentType, importList = getArgumentsState(def.Args[0], nil)
 		} else {
-			argumentType = internal.WithContextArgument
+			argumentType = internals.WithContextArgument
 		}
 	case 2:
 		contextType, ctxImport = getContextState(def.Args[0])
-		if contextType == internal.UseUnknownContext {
-			contextType = internal.NoContext
+		if contextType == internals.UseUnknownContext {
+			contextType = internals.NoContext
 			argumentType, importList = getArgumentsState(def.Args[0], &def.Args[1])
 		} else {
 			argumentType, importList = getArgumentsState(def.Args[1], nil)
@@ -280,17 +280,17 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 	}
 
 	// If the argument format does not match allowed, skip.
-	if argumentType == internal.WithUnknownArgument {
+	if argumentType == internals.WithUnknownArgument {
 		return fn, true, nil
 	}
 
 	// If the Context is unknown then skip.
-	if contextType == internal.UseUnknownContext {
+	if contextType == internals.UseUnknownContext {
 		return fn, true, nil
 	}
 
 	// If the return format is unknown then skip.
-	if returnType == internal.UnknownErrorReturn {
+	if returnType == internals.UnknownErrorReturn {
 		return fn, true, nil
 	}
 
@@ -331,7 +331,7 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 	if _, err := gen.SourceTextWithName(
 		"shogun-pkg-fn-message",
 		string(templates.Must("shogun-pkg-fn-message.tml")),
-		internal.ArgumentFunctions,
+		internals.ArgumentFunctions,
 		fn,
 	).WriteTo(&helpMessage); err != nil {
 		return fn, false, fmt.Errorf("Failed to generate function's %q help message: %+q", fn.RealName, err)
@@ -341,7 +341,7 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 	if _, err := gen.SourceTextWithName(
 		"shogun-pkg-fn-message-withsource",
 		string(templates.Must("shogun-pkg-fn-message-withsource.tml")),
-		internal.ArgumentFunctions,
+		internals.ArgumentFunctions,
 		fn,
 	).WriteTo(&helpMessageWithSource); err != nil {
 		return fn, false, fmt.Errorf("Failed to generate function's %q help message with source: %+q", fn.RealName, err)
@@ -355,45 +355,45 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 
 var ioWriteCloser = "io.WriteCloser"
 
-func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internal.VarMeta) {
+func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internals.VarMeta) {
 	switch arg.Type {
 	case "string":
 		if arg2 == nil {
-			return internal.WithStringArgument, internal.VarMeta{}
+			return internals.WithStringArgument, internals.VarMeta{}
 		}
 
 		if arg2.Type == ioWriteCloser {
-			return internal.WithStringArgumentAndWriteCloserArgument, internal.VarMeta{}
+			return internals.WithStringArgumentAndWriteCloserArgument, internals.VarMeta{}
 		}
 
-		return internal.WithUnknownArgument, internal.VarMeta{}
+		return internals.WithUnknownArgument, internals.VarMeta{}
 	case "io.Reader":
 		if arg2 == nil {
-			return internal.WithReaderArgument, internal.VarMeta{}
+			return internals.WithReaderArgument, internals.VarMeta{}
 		}
 
 		if arg2.Type == ioWriteCloser {
-			return internal.WithReaderAndWriteCloserArgument, internal.VarMeta{}
+			return internals.WithReaderAndWriteCloserArgument, internals.VarMeta{}
 		}
 
-		return internal.WithUnknownArgument, internal.VarMeta{}
+		return internals.WithUnknownArgument, internals.VarMeta{}
 	case "io.WriteCloser":
 		if arg2 == nil {
-			return internal.WithWriteCloserArgument, internal.VarMeta{}
+			return internals.WithWriteCloserArgument, internals.VarMeta{}
 		}
-		return internal.WithUnknownArgument, internal.VarMeta{}
+		return internals.WithUnknownArgument, internals.VarMeta{}
 	case "map[string]interface{}":
 		if arg2 == nil {
-			return internal.WithMapArgument, internal.VarMeta{}
+			return internals.WithMapArgument, internals.VarMeta{}
 		}
 
 		if arg2.Type == ioWriteCloser {
-			return internal.WithMapAndWriteCloserArgument, internal.VarMeta{}
+			return internals.WithMapAndWriteCloserArgument, internals.VarMeta{}
 		}
 
-		return internal.WithUnknownArgument, internal.VarMeta{}
+		return internals.WithUnknownArgument, internals.VarMeta{}
 	default:
-		params := internal.VarMeta{
+		params := internals.VarMeta{
 			Type:       arg.Type,
 			TypeAddr:   arg.ExType,
 			Import:     arg.Import.Path,
@@ -402,24 +402,24 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internal.VarMet
 
 		if arg.ImportedObject != nil {
 			if arg.StructObject == nil {
-				return internal.WithUnknownArgument, internal.VarMeta{}
+				return internals.WithUnknownArgument, internals.VarMeta{}
 			}
 
 			if len(arg.Type) != 0 {
 				name := strings.TrimPrefix(arg.Type, "*")
 				if unicode.IsLower(rune(name[0])) {
-					params.Exported = internal.UnExportedImport
+					params.Exported = internals.UnExportedImport
 				} else {
-					params.Exported = internal.ExportedImport
+					params.Exported = internals.ExportedImport
 				}
 			}
 
 			if arg2 == nil {
-				return internal.WithImportedObjectArgument, params
+				return internals.WithImportedObjectArgument, params
 			}
 
 			if arg2.Type == ioWriteCloser {
-				return internal.WithImportedAndWriteCloserArgument, params
+				return internals.WithImportedAndWriteCloserArgument, params
 			}
 		}
 
@@ -427,36 +427,36 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internal.VarMet
 			if len(arg.Type) != 0 {
 				name := strings.TrimPrefix(arg.Type, "*")
 				if unicode.IsLower(rune(name[0])) {
-					params.Exported = internal.UnExportedImport
+					params.Exported = internals.UnExportedImport
 				} else {
-					params.Exported = internal.ExportedImport
+					params.Exported = internals.ExportedImport
 				}
 			}
 
 			if arg2 == nil {
-				return internal.WithStructArgument, params
+				return internals.WithStructArgument, params
 			}
 
 			if arg2.Type == ioWriteCloser {
-				return internal.WithStructAndWriteCloserArgument, params
+				return internals.WithStructAndWriteCloserArgument, params
 			}
 		}
 	}
 
-	return internal.WithUnknownArgument, internal.VarMeta{}
+	return internals.WithUnknownArgument, internals.VarMeta{}
 }
 
 func getReturnState(arg ast.ArgType) int {
 	switch arg.Type {
 	case "error":
-		return internal.ErrorReturn
+		return internals.ErrorReturn
 	}
 
-	return internal.UnknownErrorReturn
+	return internals.UnknownErrorReturn
 }
 
-func getContextState(arg ast.ArgType) (int, internal.VarMeta) {
-	var imp internal.VarMeta
+func getContextState(arg ast.ArgType) (int, internals.VarMeta) {
+	var imp internals.VarMeta
 	imp.Type = arg.Type
 	imp.TypeAddr = arg.ExType
 
@@ -465,23 +465,23 @@ func getContextState(arg ast.ArgType) (int, internal.VarMeta) {
 		if arg.Import.Path == googleContext {
 			imp.Import = googleContext
 			imp.ImportNick = arg.Import.Name
-			return internal.UseGoogleContext, imp
+			return internals.UseGoogleContext, imp
 		}
-		return internal.UseUnknownContext, imp
+		return internals.UseUnknownContext, imp
 	case "context.CancelContext":
 		if arg.Import.Path == fauxContext {
 			imp.Import = fauxContext
 			imp.ImportNick = arg.Import.Name
-			return internal.UseFauxCancelContext, imp
+			return internals.UseFauxCancelContext, imp
 		}
-		return internal.UseUnknownContext, imp
+		return internals.UseUnknownContext, imp
 	}
 
-	return internal.UseUnknownContext, imp
+	return internals.UseUnknownContext, imp
 }
 
 // maxName returns name of longest function.
-func maxName(pn internal.PackageFunctions) int {
+func maxName(pn internals.PackageFunctions) int {
 	curr := -1
 	for _, fn := range pn.List {
 		if curr < len(fn.Name) {

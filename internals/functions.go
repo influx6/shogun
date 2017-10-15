@@ -1,4 +1,4 @@
-package internal
+package internals
 
 import (
 	"strings"

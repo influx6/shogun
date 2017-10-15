@@ -6,7 +6,7 @@ import (
   "io"
   "time"
   "encoding/json"
-  "github.com/influx6/shogun/internal"
+  "github.com/influx6/shogun/internals"
 {{ if .Main.HasGoogleImports }}
   gctx "context"
 {{end}}
@@ -31,7 +31,7 @@ var (
 
 // MainShogunMeta returns ShogunFunc for all available functions to provide terse information with
 // attached function for displaying or for testing.
-func MainShogunMeta(cmd string, args []string) (internal.ShogunFunc, error) {
+func MainShogunMeta(cmd string, args []string) (internals.ShogunFunc, error) {
   {{ if notequal (len .Subs) 0}}// If its a subcommand then let subcommand handle this.
   if subCommands[cmd] {
     var first string
@@ -52,7 +52,7 @@ func MainShogunMeta(cmd string, args []string) (internal.ShogunFunc, error) {
   {{end}}switch cmd {
     {{ range $_, $elem := .Main.Functions }}{{range $elem.List}}
       case {{quote .Name}}, {{quote .RealName}}:
-        return internal.ShogunFunc{
+        return internals.ShogunFunc{
           Context: {{.Context}},
           Type: {{.Type}},
           Return: {{.Return}},
@@ -65,7 +65,7 @@ func MainShogunMeta(cmd string, args []string) (internal.ShogunFunc, error) {
     {{end}}
   }
 
-  return internal.ShogunFunc{}, errors.New("Not found")
+  return internals.ShogunFunc{}, errors.New("Not found")
 }
 
 // MainShogunExecute executes necessary commands as needed from its arguments and
