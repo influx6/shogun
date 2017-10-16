@@ -409,6 +409,30 @@ echo "We lost the war" | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 {"name":"bat"} | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 ```
 
+## FAQ
+
+### Why do I need to re-run `shogun build` on each change ?
+
+Because `shogun build` supports building from a custom directory using the `-dir`
+flag, we can not say exactly where your shogun files will be stored, hence calling
+`shogun build` automatically for you might not suite your usage, thereby the need to
+call it yourself on each change.
+
+
+### What differentiates `shogun` from `mage` ?
+
+While `mage` focuses on using Go functions like `make` or `rake` tasks, shogun
+expands the usage of functions not just as task runners, but as self contained pure
+behaviors that can receive input and respond. This allows you to build commandline
+apps quicker with `shogun` and even quickly test out function behaviours.
+
+More so, I envision `shogun` for the purpose of being able to deploy shogun built
+binaries into docker images as pure functions that can be used to support a service
+or serve a service like a static file server which only ever runs when needed, ..etc
+
+Of course, you can use `shogun` functions like tasks similar to `mage`, but in effect
+that is a side benefit of the approach.
+
 ## Contributions
 Contributions are welcome, do please checkout the [Contribution Guidlines](./contrib.md).
 
