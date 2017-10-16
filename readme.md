@@ -24,7 +24,7 @@ to the standard output file `stdout`.*
 
 ## Introduction and Demo Video
 
-[![Shogun Intro](./media/video.png)](https://youtu.be/JLj0hTbzX7s)
+[![Shogun Intro](./media/video.png)](https://youtu.be/GsHBB_xyFTY)
 
 ## Install
 
