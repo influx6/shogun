@@ -427,7 +427,7 @@ behaviors that can receive input and respond. This allows you to build commandli
 apps quicker with `shogun` and even quickly test out function behaviours.
 
 More so, I envision `shogun` for the purpose of being able to deploy shogun built
-binaries into docker images as pure functions that can be used to support a service
+binaries into docker images as pure functions, that can be used to support a service
 or serve a service like a static file server which only ever runs when needed, ..etc
 
 Of course, you can use `shogun` functions like tasks similar to `mage`, but in effect
