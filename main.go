@@ -80,6 +80,10 @@ func main() {
 					Usage: "-dirName=bob-build set the name of directory and package",
 				},
 				cli.BoolFlag{
+					Name:  "m,main",
+					Usage: "-main to force main as the package name",
+				},
+				cli.BoolFlag{
 					Name:  "v,verbose",
 					Usage: "-verbose to show hidden logs and operations",
 				},
@@ -92,10 +96,6 @@ func main() {
 				cli.StringFlag{
 					Name:  "d,dir",
 					Usage: "-dir=./example to set directory to scan for functions",
-				},
-				cli.BoolFlag{
-					Name:  "m,main",
-					Usage: "-main to force main as the package name",
 				},
 				cli.BoolFlag{
 					Name:  "v,verbose",
@@ -150,6 +150,10 @@ func main() {
 				cli.BoolFlag{
 					Name:  "v,verbose",
 					Usage: "-verbose to show hidden logs and operations",
+				},
+				cli.BoolFlag{
+					Name:  "s,source",
+					Usage: "-source to show source of binary function",
 				},
 			},
 		},
@@ -254,10 +258,18 @@ func helpAction(c *cli.Context) error {
 
 	binaryPath := binPath()
 
+	var command string
+
+	if c.Bool("source") {
+		command = fmt.Sprintf("%s/%s help -s %s", binaryPath, c.Args().First(), strings.Join(c.Args().Tail(), " "))
+	} else {
+		command = fmt.Sprintf("%s/%s help %s", binaryPath, c.Args().First(), strings.Join(c.Args().Tail(), " "))
+	}
+
 	var response, responseErr bytes.Buffer
 	binCmd := exec.New(
 		exec.Async(),
-		exec.Command("%s/%s help %s", binaryPath, c.Args().First(), strings.Join(c.Args().Tail(), " ")),
+		exec.Command(command),
 		exec.Output(&response),
 		exec.Err(&responseErr),
 		exec.Output(os.Stdout),

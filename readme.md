@@ -17,9 +17,9 @@ individually.
 come through the standard input file `stdin`, this ensures you can pass arbitrary data in or even
 JSON payloads to be loaded into a `Struct` type.*
 
-*More so, all response must either be either an error returned which will be delivered through
-the standard error file `stderr` or all functions must receive a `io.WriteCloser` to deliver
-response for an execution of a function to the standard output file `stdout`.*
+*More so, all response must either be an error returned which will be delivered through
+the standard error file `stderr` or be a response written to a `io.WriteCloser` to deliver
+to the standard output file `stdout`.*
 
 ## Install
 
@@ -33,7 +33,7 @@ Then run `shogun` to validate successful install:
 > shogun
 ⠙ Nothing to do...
 
-⡿ Run `shogun help` to see what it takes to make me work.
+⡿ Run `shogun -h` to see what it takes to make me work.
 ```
 
 ## Writing Shogun Packages
@@ -82,20 +82,20 @@ package do
 ```
 
 All binaries created by shogun are self complete and can equally be called directly without
-the `shogun` command, which makes it very usable for easy deployable self contained executables
+the `shogun` command, which makes it very usable for easy deployable self contained binaries
 that can be used in place where behaviors need to be exposed as functions.
 
 Shogun packages are normal Go packages and all directories within the root where shogun
 is executed will be parsed and processed for identification of possible shogun packages,
-where those identified will each package will be a binary in and of itself and the main
-package if any found will combine all other binaries into a single one if so desired.
+where those identified will each have a binary generated and the main package if any found
+will combine all other binaries into a single one if so desired.
 
 
 ### Writing Functions for Shogun
 
-Shogun focuses on the execution of functions, that supports a limited set of formats,
-More so, to match needs of most with `Context` objects, the function formats support
-the usage of Context as first place arguments.
+Shogun focuses on the execution of functions, that supports a limited set of formats.
+More so, each format allows the use of `Context` or `CancelContext` objects
+as first place arguments.
 
 - No Argument Functions
 
@@ -187,9 +187,7 @@ func(Context, io.Reader, io.WriteCloser) error
 
 *Where `Struct`   => represents any struct declared in package*
 
-*where `Interface` => represents any interface declared in package*
-
-*where `package.Type` => represents Struct type imported from other package*
+*where `package.Struct` => represents Struct type imported from other package*
 
 *Any other thing beyond this type formats won't be allowed and will be ignored in
 function list and execution.*
@@ -234,41 +232,44 @@ func Jija(ctx context.CancelContext, mp ty.Woofer) error {
 }
 ```
 
-In shogun, you can tag a function as the default function to be executed every time
-when it is called through shogun or through it's generated binary, by tagging it
+In shogun, you can tag a function as the default function to be executed every it's
+binary is called without argument through shogun or through it's generated binary, by tagging it
 with a `@default` annotation.
 
 
 ### Using Context
 
-Only the following packages and interfaces are allowed for context usage.
-If you need context then it must always be the first argument.
+Only the following packages are allowed for usage. If you need context, then it
+must always be the first argument.
 
 - context "context.Context"
 - github.com/influx6/fuax/context "context.CancelContext"
 
-When using `context.Context` package from the internal Go packages, has a means of
-timeout for the execution life time of a function. Support of filling context with value
+When using `context.Context` package from the internal Go packages, only its ability to be used as
+a timeout will be set if the `-t` or `-timeout` flag has a value. Support of filling context with values
 is not planned or desired.
 
 Shogun will use the `-time` flag received through the commandline to set lifetime
 timeout for the 2 giving context else the context will not have expiration deadlines.
 
+Note that shogun by default does not respect `Context` timeouts, it's up to you to
+write your function source to take `Context` into account for the lifetime of your function.
 
 ## CLI Usage
-Before using any other command apart from `shogun list` in a package always execute:
+Before using any other command apart from `shogun list` in a package, always execute:
 
 ```bash
 > shogun build
 ```
 
-Shogun by defaults will be all the first level directories that have shogun files with appropriate
-binary names based on package name or if `binaryName` annotation is declared, and will generate
-a single binary if there exists any shogun files within the root with subcommands that will
-connect to other commands from shogun packages in the first level directories.
+Shogun by defaults will process both the root and all first level directories that
+have shogun files within, generating appropriate binaries based on package name or
+if `binaryName` annotation is declared, and will also generate a single binary if
+there exists any shogun files within the root directory, with subcommands that will
+connect to other binaries in the first level directories.
 
-This allows you to have a single binary that is bundled with all commands to execution functions
-from any other shogun package, but this can be changed to only allow single binaries incase you
+This allows you to have a single binary that is bundled with all commands for executing functions
+from any other subpackage, but this can be changed to only allow single binaries, incase you
 want truly separate binaries.
 
 *Note, this only applies, if you have Go files that have the `+build shogun `within the root, where `shogun build` gets executed.*
@@ -282,6 +283,7 @@ variable `SHOGUNBIN` or default `GOBIN`/`GOPATH/bin` .
 Using the `shogun` command, we can do the following:
 
 - Build shogun based package files
+
 Run this if the shogun files and directories exists right in the root directory.
 
 ```bash
@@ -295,20 +297,21 @@ shogun build -rm
 ```
 
 - Build shogun based package files without generating binaries
+
 Run this if the shogun files and directories exists right in the root directory.
 
 ```bash
 shogun build -skip
 ```
 
-- Build a shogun based package files in a directory
+- Build a shogun based package files from a directory
 
 ```bash
 shogun build -d=./examples
 ```
 
 - Build a shogun based package files in a directory and only generate binary for
-root files
+root shogun files
 
 ```bash
 shogun build -skipsub -d=./examples
@@ -356,18 +359,24 @@ shogun add -dir=vuz vuz.go
 shogun add vuz.go ball.go wreck.go
 ```
 
-*You can also add more files into a directory in this manner.*
+*You can also add more files into a directory when using `-dir` flag in this manner.*
 
-- Add new shogun files into package but you `main` as package name
+- Add new shogun files into package but use `main` as package name
 
 ```bash
 shogun add -m vuz.go
 ```
 
-- List all functions with
+- List all functions in the root
 
 ```bash
 shogun list
+```
+
+- List all functions in from a directory
+
+```bash
+shogun list -dir=./examples
 ```
 
 - List all functions with short commentary
@@ -382,19 +391,19 @@ shogun help {{BINARYNAME}} {{FunctionName}}
 shogun help -s {{BINARYNAME}} {{FunctionName}}
 ```
 
-- Run function of package binary expecting no input
+- Run function of package binary that expects no input
 
 ```bash
 shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 ```
 
-- Run function of package binary with standard input
+- Run function of package binary expecting string input with standard input
 
 ```bash
 echo "We lost the war" | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 ```
 
-- Run function of package binary shogun files with json input
+- Run function of package binary expecting json input with standard input
 
 ```bash
 {"name":"bat"} | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
