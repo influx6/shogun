@@ -21,6 +21,11 @@ JSON payloads to be loaded into a `Struct` type.*
 the standard error file `stderr` or be a response written to a `io.WriteCloser` to deliver
 to the standard output file `stdout`.*
 
+
+## Introduction and Demo Video
+
+[![Shogun Intro](./media/video.png)](https://youtu.be/WRoW86RfEGU)
+
 ## Install
 
 ```bash
