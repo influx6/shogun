@@ -412,6 +412,16 @@ shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 echo "We lost the war" | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 ```
 
+- Run function of package binary expecting string input with the `in/input` flag
+
+The `in/input` value provides an alternative to given input to functions for those who prefer 
+such approach, it provides a means of providing a one time input to the function, unlike where 
+using the `stdin` may provided repetitive streaming of data to the function.
+
+```bash
+shogun -in "We lost the war" {{BINARYNAME}} {{FUNCTIONNAME}}
+```
+
 - Run function of package binary expecting json input with standard input
 
 ```bash
