@@ -284,12 +284,9 @@ func helpAction(c *cli.Context) error {
 		command = fmt.Sprintf("%s/%s help %s", binaryPath, c.Args().First(), strings.Join(c.Args().Tail(), " "))
 	}
 
-	var response, responseErr bytes.Buffer
 	binCmd := exec.New(
 		exec.Async(),
 		exec.Command(command),
-		exec.Output(&response),
-		exec.Err(&responseErr),
 		exec.Output(os.Stdout),
 	)
 
