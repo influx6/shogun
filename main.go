@@ -252,8 +252,20 @@ func helpAction(c *cli.Context) error {
 		events = metrics.New(custom.StackDisplay(os.Stdout))
 	}
 
+	var buildDone bool
 	if _, err := gexec.LookPath(c.Args().First()); err != nil {
-		return fmt.Errorf("%q binary not ready yet, run `shogun build` first", c.Args().First())
+		if err := buildAction(c); err != nil {
+			fmt.Println("⡿ Run `shogun build -dir=''` to build package directory first before running `shogun [] [Command]`.")
+			return nil
+		}
+
+		buildDone = true
+	}
+
+	if !buildDone {
+		if err := buildAction(c); err != nil {
+			// do nothing for now
+		}
 	}
 
 	binaryPath := binPath()
@@ -288,6 +300,22 @@ func mainAction(c *cli.Context) error {
 		fmt.Printf("⠙ Nothing to do...\n\n")
 		fmt.Println("⡿ Run `shogun -h` to see what it takes to make me work.")
 		return nil
+	}
+
+	var buildDone bool
+	if _, err := gexec.LookPath(c.Args().First()); err != nil {
+		if err := buildAction(c); err != nil {
+			fmt.Println("⡿ Run `shogun build -dir=''` to build package directory first before running `shogun [] [Command]`.")
+			return nil
+		}
+
+		buildDone = true
+	}
+
+	if !buildDone {
+		if err := buildAction(c); err != nil {
+			// do nothing for now
+		}
 	}
 
 	events := metrics.New()
@@ -393,6 +421,10 @@ func buildAction(c *cli.Context) error {
 	hashList, err := samurai.ListPackageHash(events, events, targetDir, ctx)
 	if err != nil {
 		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
+		if err == samurai.ErrSkipDir {
+			return nil
+		}
+
 		return err
 	}
 

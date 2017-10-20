@@ -41,6 +41,10 @@ Then run `shogun` to validate successful install:
 ⡿ Run `shogun -h` to see what it takes to make me work.
 ```
 
+## Requirements
+
+Shogun only requires that you have a working installation of Go installed with your `GOPATH` set accordingly.
+
 ## Writing Shogun Packages
 
 Writing Go package which are to be used by Shogun to generate binaries are rather simple,
