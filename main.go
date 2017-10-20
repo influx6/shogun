@@ -69,6 +69,12 @@ func main() {
 	app.Description = "Become one with your functions"
 	app.CustomAppHelpTemplate = helpTemplate
 	app.Action = mainAction
+	app.Flags = []cli.Flag{
+		cli.StringFlag{
+			Name:  "in,input",
+			Usage: "-in=bob-build to give a one time value to a function as input",
+		},
+	}
 
 	app.Commands = []cli.Command{
 		{
@@ -326,10 +332,18 @@ func mainAction(c *cli.Context) error {
 
 	binaryPath := binPath()
 
+	var command string
+
+	if c.String("in") != "" {
+		command = fmt.Sprintf("%s/%s -in %s %s", binaryPath, c.Args().First(), c.String("in"), strings.Join(c.Args().Tail(), " "))
+	} else {
+		command = fmt.Sprintf("%s/%s %s", binaryPath, c.Args().First(), strings.Join(c.Args().Tail(), " "))
+	}
+
 	var response, responseErr bytes.Buffer
 	binCmd := exec.New(
 		exec.Async(),
-		exec.Command("%s/%s %s", binaryPath, c.Args().First(), strings.Join(c.Args().Tail(), " ")),
+		exec.Command(command),
 		exec.Output(&response),
 		exec.Err(&responseErr),
 		exec.Input(os.Stdin),
