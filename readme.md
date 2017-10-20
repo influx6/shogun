@@ -420,12 +420,12 @@ echo "We lost the war" | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 
 ## FAQ
 
-### Why do I need to re-run `shogun build` on each change ?
+### Do I need to re-run `shogun build -dir` on each change ?
 
-Because `shogun build` supports building from a custom directory using the `-dir`
-flag, we can not say exactly where your shogun files will be stored, hence calling
-`shogun build` automatically for you might not suite your usage, thereby the need to
-call it yourself on each change.
+With the latest update to shogun, if you have shogun marked package files in 
+your root directory of your package or within the area where `shogun build` gets 
+called, then any change will be rebuilt automatically. But for others, you would 
+need to specifically run `shogun build -dir=''` to build a given directory.
 
 
 ### What differentiates `shogun` from `mage` ?
