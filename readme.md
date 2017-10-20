@@ -43,7 +43,7 @@ Then run `shogun` to validate successful install:
 
 ## Requirements
 
-Shogun only requires that you have a working installation of Go installed with your `GOPATH` set accordingly.
+Shogun only requires that you have a working installation of Go (>= 1.2) installed with your `GOPATH` set accordingly.
 
 ## Writing Shogun Packages
 
