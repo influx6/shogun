@@ -376,7 +376,11 @@ func listAction(c *cli.Context) error {
 	functions, err := samurai.ListFunctions(events, events, filepath.Join(currentDir, c.String("dir")), ctx)
 	if err != nil {
 		events.Emit(metrics.Errorf("Failed to generate function list : %+q", err))
-		return fmt.Errorf("Not a shogun directory or contains no shogun files: %+q", err)
+		if err == samurai.ErrSkipDir {
+			return nil
+		}
+
+		return err
 	}
 
 	result := gen.SourceTextWithName(
