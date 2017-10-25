@@ -318,6 +318,7 @@ func mainAction(c *cli.Context) error {
 	if !buildDone {
 		if err := buildAction(c); err != nil {
 			// do nothing for now
+			return err
 		}
 	}
 
