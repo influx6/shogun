@@ -388,6 +388,7 @@ type PackageDeclaration struct {
 	Functions        []FuncDeclaration                 `json:"functions"`
 	ObjectFunc       map[*ast.Object][]FuncDeclaration `json:"object_functions"`
 	ImportedPackages map[string]Packages               `json:"imported_packages"`
+	importedloaded   bool
 }
 
 // HasFunctionFor returns true/false if the giving function name exists for the package.
@@ -400,6 +401,12 @@ func HasFunctionFor(pkg PackageDeclaration) func(StructDeclaration, string) bool
 // loadImported will attempt to load all available imported package that
 // are not internal to go.
 func (pkg *PackageDeclaration) loadImported(m metrics.Metrics) error {
+	if pkg.importedloaded {
+		return nil
+	}
+
+	pkg.importedloaded = true
+
 	if pkg.ImportedPackages == nil {
 		pkg.ImportedPackages = make(map[string]Packages)
 	}
@@ -414,6 +421,15 @@ func (pkg *PackageDeclaration) loadImported(m metrics.Metrics) error {
 		}
 
 		importDir := filepath.Join(goSrcPath, imported.Path)
+		uniqueImportDir := importDir + "#" + imported.Name
+		processedPackages.pl.Lock()
+		if res, ok := processedPackages.pkgs[uniqueImportDir]; ok {
+			processedPackages.pl.Unlock()
+			pkg.ImportedPackages[imported.Path] = Packages{res}
+			continue
+		}
+		processedPackages.pl.Unlock()
+
 		importedPkgs, err := PackageWithBuildCtx(m, importDir, build.Default)
 		if err != nil {
 			return err

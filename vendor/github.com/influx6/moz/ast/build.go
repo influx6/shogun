@@ -204,7 +204,8 @@ func PackageWithBuildCtx(log metrics.Metrics, dir string, ctx build.Context) ([]
 		uniqueDir := fmt.Sprintf("%s#%s", dir, pkgTag)
 
 		processedPackages.pl.Lock()
-		if res, ok := processedPackages.pkgs[uniqueDir]; ok {
+		res, ok := processedPackages.pkgs[uniqueDir]
+		if ok {
 			log.Emit(metrics.Info("Skipping package processing").With("dir", dir))
 			processedPackages.pl.Unlock()
 			packageDeclrs[pkg.Name] = res
