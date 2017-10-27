@@ -432,7 +432,7 @@ echo "We lost the war" | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 ```
 
 - Run function of package binary using remaining arguments apart from `{{BINARYNAME}}`
-and `{{FUNCTIONNAME}}` has input 
+and `{{FUNCTIONNAME}}` has input
 
 ```bash
 shogun {{BINARYNAME}} {{FUNCTIONNAME}} "We lost the war"
@@ -445,6 +445,14 @@ shogun {{BINARYNAME}} {{FUNCTIONNAME}} "We lost the war"
 ```
 
 ## FAQ
+
+
+### Must all commands before run with the `shogun` CLI?
+
+No, every binary that is built is self contained and the `shogun` CLI only proxies
+calls to the binary which it expects to be in the `SHOGUNBIN` or `GOBIN`/`GOPATH/bin`.
+You can call the binary directly without `shogun` and will work as expected if the path
+is added into your environment paths.
 
 ### Do I need to re-run `shogun build -dir` on each change ?
 
