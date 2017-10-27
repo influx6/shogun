@@ -1,0 +1,148 @@
+{
+	"comment": "",
+	"ignore": "test",
+	"package": [
+		{
+			"checksumSHA1": "wP6b3CHYhF8ivc8qo314aDd9ZCk=",
+			"path": "github.com/corpix/uarand",
+			"revision": "031be390f409fb4bac8fb299e3bcd101479f89f8",
+			"revisionTime": "2017-07-23T15:09:23Z"
+		},
+		{
+			"checksumSHA1": "jt2qfJxo7XsMCo6RerjgcoaGZPM=",
+			"path": "github.com/fatih/color",
+			"revision": "67c513e5729f918f5e69786686770c27141a4490",
+			"revisionTime": "2017-08-04T15:04:06Z"
+		},
+		{
+			"checksumSHA1": "qt71KoGfs0dZ/GDaXFXmvFs54PQ=",
+			"path": "github.com/icrowley/fake",
+			"revision": "e64cc2cf92049a299f359734c6ea76073f2a8b2c",
+			"revisionTime": "2017-07-23T15:10:11Z"
+		},
+		{
+			"checksumSHA1": "dT9ylsxhW065Gcs2MpIm4/05Bbg=",
+			"path": "github.com/influx6/faux/context",
+			"revision": "e38eac0f5a4c46d61c178de35ed6fe06b2deb1de",
+			"revisionTime": "2017-10-20T19:47:45Z"
+		},
+		{
+			"checksumSHA1": "/Q/NoJgfXyBwZyKhcLcCG1e9zcw=",
+			"path": "github.com/influx6/faux/exec",
+			"revision": "e38eac0f5a4c46d61c178de35ed6fe06b2deb1de",
+			"revisionTime": "2017-10-20T19:47:45Z"
+		},
+		{
+			"checksumSHA1": "8Vk/1gUyvjBtPa8T7ANY3sudO/o=",
+			"path": "github.com/influx6/faux/fmtwriter",
+			"revision": "e38eac0f5a4c46d61c178de35ed6fe06b2deb1de",
+			"revisionTime": "2017-10-20T19:47:45Z"
+		},
+		{
+			"checksumSHA1": "GdiFEDXA6ntvH/zkDyDDLbdMLBI=",
+			"path": "github.com/influx6/faux/hexwriter",
+			"revision": "e38eac0f5a4c46d61c178de35ed6fe06b2deb1de",
+			"revisionTime": "2017-10-20T19:47:45Z"
+		},
+		{
+			"checksumSHA1": "Bh5CWrzkSWCRyOvgrNnDfhXUjtA=",
+			"path": "github.com/influx6/faux/metrics",
+			"revision": "e38eac0f5a4c46d61c178de35ed6fe06b2deb1de",
+			"revisionTime": "2017-10-20T19:47:45Z"
+		},
+		{
+			"checksumSHA1": "VP18i0EVlx12I56BHiWyGhoDnmE=",
+			"path": "github.com/influx6/faux/metrics/custom",
+			"revision": "e38eac0f5a4c46d61c178de35ed6fe06b2deb1de",
+			"revisionTime": "2017-10-20T19:47:45Z"
+		},
+		{
+			"checksumSHA1": "QYVdqyvZOD5mNr3jK0XRw726vjA=",
+			"path": "github.com/influx6/faux/reflection",
+			"revision": "e38eac0f5a4c46d61c178de35ed6fe06b2deb1de",
+			"revisionTime": "2017-10-20T19:47:45Z"
+		},
+		{
+			"checksumSHA1": "KDXLCminPrEHK1pUK1VgUkcpWrk=",
+			"path": "github.com/influx6/faux/tests",
+			"revision": "e38eac0f5a4c46d61c178de35ed6fe06b2deb1de",
+			"revisionTime": "2017-10-20T19:47:45Z"
+		},
+		{
+			"checksumSHA1": "e1LyNSlLJNdmOVwHdKbPV+5Fvss=",
+			"path": "github.com/influx6/faux/types/actions",
+			"revision": "e38eac0f5a4c46d61c178de35ed6fe06b2deb1de",
+			"revisionTime": "2017-10-20T19:47:45Z"
+		},
+		{
+			"checksumSHA1": "pB7s0rhgrt6LF28sWxq8w/7ZwRI=",
+			"path": "github.com/influx6/faux/types/events",
+			"revision": "e38eac0f5a4c46d61c178de35ed6fe06b2deb1de",
+			"revisionTime": "2017-10-20T19:47:45Z"
+		},
+		{
+			"checksumSHA1": "bg5DKLmViup6kOjLBybsfGRd1ks=",
+			"path": "github.com/influx6/faux/vfiles",
+			"revision": "e38eac0f5a4c46d61c178de35ed6fe06b2deb1de",
+			"revisionTime": "2017-10-20T19:47:45Z"
+		},
+		{
+			"checksumSHA1": "50rYWDP2xhe3Oh1UFXrX9PkjAi4=",
+			"path": "github.com/influx6/gobuild/build",
+			"revision": "02ff49690c426e4cdd1a0987848fdd5beccfd369",
+			"revisionTime": "2017-10-05T18:33:27Z"
+		},
+		{
+			"checksumSHA1": "H+n85msQ6FOXTPhRNl/ygpVjouY=",
+			"path": "github.com/influx6/gobuild/srcpath",
+			"revision": "02ff49690c426e4cdd1a0987848fdd5beccfd369",
+			"revisionTime": "2017-10-05T18:33:27Z"
+		},
+		{
+			"checksumSHA1": "/saYLmm3PWW9ifOpmY9js7lBO+Q=",
+			"path": "github.com/influx6/moz/ast",
+			"revision": "fd66753a4c74e21fe8f508db4eceef8de6b419e0",
+			"revisionTime": "2017-10-25T19:15:26Z"
+		},
+		{
+			"checksumSHA1": "YMQfqDSO6bcnp6S+LPKNXGTJawE=",
+			"path": "github.com/influx6/moz/gen",
+			"revision": "fd66753a4c74e21fe8f508db4eceef8de6b419e0",
+			"revisionTime": "2017-10-25T19:15:26Z"
+		},
+		{
+			"checksumSHA1": "ARrBZDGCJyd6GCFG+dlFCrgXi4Q=",
+			"path": "github.com/influx6/moz/gen/templates",
+			"revision": "fd66753a4c74e21fe8f508db4eceef8de6b419e0",
+			"revisionTime": "2017-10-25T19:15:26Z"
+		},
+		{
+			"checksumSHA1": "sGC8yzCmU7CO6/Uy6TTWRgHpgLI=",
+			"origin": "github.com/fatih/color/vendor/github.com/mattn/go-colorable",
+			"path": "github.com/mattn/go-colorable",
+			"revision": "67c513e5729f918f5e69786686770c27141a4490",
+			"revisionTime": "2017-08-04T15:04:06Z"
+		},
+		{
+			"checksumSHA1": "w8LTR7SnKYaJgDdhvC5qTjYJ5s8=",
+			"origin": "github.com/fatih/color/vendor/github.com/mattn/go-isatty",
+			"path": "github.com/mattn/go-isatty",
+			"revision": "67c513e5729f918f5e69786686770c27141a4490",
+			"revisionTime": "2017-08-04T15:04:06Z"
+		},
+		{
+			"checksumSHA1": "MfZX5IRcErEUs5hsqUypROxzfUQ=",
+			"path": "github.com/minio/cli",
+			"revision": "45db1f8a055198ad8c12754026cb2c51c584c756",
+			"revisionTime": "2017-02-27T07:32:28Z"
+		},
+		{
+			"checksumSHA1": "jBzWOmKY4vGfgD+DVRzzFul+VP8=",
+			"origin": "github.com/fatih/color/vendor/golang.org/x/sys/unix",
+			"path": "golang.org/x/sys/unix",
+			"revision": "67c513e5729f918f5e69786686770c27141a4490",
+			"revisionTime": "2017-08-04T15:04:06Z"
+		}
+	],
+	"rootPath": "github.com/influx6/shogun"
+}
