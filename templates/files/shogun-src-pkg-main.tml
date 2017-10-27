@@ -97,15 +97,19 @@ func mainAction(c *cli.Context) error {
 		 return nil
 		}
 
+		defer os.Exit(1)
+
 		// Write error to stderr and only return err if attempt to write json failed.
 		if jserr := json.NewEncoder(os.Stderr).Encode(struct{
 			Err error `json:"error"`
 			Method string `json:"method"`
+			Message string `json:"message"`
 			Timeout time.Duration `json:"duration"`
 		}{
 			Err: err,
 			Timeout: tm,
 			Method: c.Args().First(),
+			Message: fmt.Sprintf("Command %+q failed with error", c.Args().First()),
 		}); jserr != nil {
 			return jserr
 		}

@@ -288,11 +288,18 @@ func helpAction(c *cli.Context) error {
 		exec.Async(),
 		exec.Command(command),
 		exec.Output(os.Stdout),
+		exec.Err(os.Stderr),
 	)
 
-	if err := binCmd.Exec(context.Background(), events); err != nil {
+	fmt.Printf("⡿ Executing %+q:\n", command)
+	exitCode, err := binCmd.ExecWithExitCode(context.Background(), events)
+	if err != nil {
 		events.Emit(metrics.Error(err))
 		return fmt.Errorf("Command Error: %+q", err)
+	}
+
+	if exitCode > 0 {
+		return fmt.Errorf("Command Error: ExitCode: %d\n", exitCode)
 	}
 
 	return nil
@@ -347,9 +354,19 @@ func mainAction(c *cli.Context) error {
 		exec.Input(os.Stdin),
 	)
 
-	if err := binCmd.Exec(context.Background(), events); err != nil {
+	fmt.Printf("⡿ Executing %+q:\n", command)
+	exitCode, err := binCmd.ExecWithExitCode(context.Background(), events)
+	if err != nil {
 		events.Emit(metrics.Error(err))
 		return fmt.Errorf("Command Error: %+q\n %+s", err, responseErr.String())
+	}
+
+	if exitCode > 0 {
+		return fmt.Errorf("Command Error: exitCode: %d\n%+q\n", exitCode, responseErr.String())
+	}
+
+	if responseErr.Len() != 0 {
+		return fmt.Errorf("Command Error: exitCode: %d\n%+q\n", exitCode, responseErr.String())
 	}
 
 	fmt.Println(response.String())
