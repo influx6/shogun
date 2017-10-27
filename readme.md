@@ -120,12 +120,31 @@ func(Context)
 func(Context) error
 ```
 
+- String based Functions
+
+```go
+func(string)
+func(string) error
+func(Context, string) error
+func(Context, string, io.WriteCloser) error
+```
+
+- StringSlice based Functions
+
+```go
+func([]string)
+func([]string) error
+func(Context, []string) error
+func(Context, []string, io.WriteCloser) error
+```
+
 - Map based Functions
 
 ```go
 func(map[string]interface{})
 func(map[string]interface{}) error
 func(Context, map[string]interface{}) error
+func(Context, map[string]interface{}, io.WriteCloser) error
 ```
 
 - Struct based Functions
@@ -412,14 +431,11 @@ shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 echo "We lost the war" | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 ```
 
-- Run function of package binary expecting string input with the `in/input` flag
-
-The `in/input` value provides an alternative to given input to functions for those who prefer 
-such approach, it provides a means of providing a one time input to the function, unlike where 
-using the `stdin` may provided repetitive streaming of data to the function.
+- Run function of package binary using remaining arguments apart from `{{BINARYNAME}}`
+and `{{FUNCTIONNAME}}` has input 
 
 ```bash
-shogun -in "We lost the war" {{BINARYNAME}} {{FUNCTIONNAME}}
+shogun {{BINARYNAME}} {{FUNCTIONNAME}} "We lost the war"
 ```
 
 - Run function of package binary expecting json input with standard input
@@ -432,9 +448,9 @@ shogun -in "We lost the war" {{BINARYNAME}} {{FUNCTIONNAME}}
 
 ### Do I need to re-run `shogun build -dir` on each change ?
 
-With the latest update to shogun, if you have shogun marked package files in 
-your root directory of your package or within the area where `shogun build` gets 
-called, then any change will be rebuilt automatically. But for others, you would 
+With the latest update to shogun, if you have shogun marked package files in
+your root directory of your package or within the area where `shogun build` gets
+called, then any change will be rebuilt automatically. But for others, you would
 need to specifically run `shogun build -dir=''` to build a given directory.
 
 

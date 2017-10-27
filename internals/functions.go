@@ -32,19 +32,21 @@ const (
 
 // const for input state.
 const (
-	NoArgument                               = iota + 15 // is func()
-	WithContextArgument                                  // is func(Context)
-	WithStringArgument                                   // is func(string)
-	WithMapArgument                                      // is func(map[string]interface{})
-	WithStructArgument                                   // is func(Movie)
-	WithImportedObjectArgument                           // is func(types.IMovie)
-	WithReaderArgument                                   // is func(io.Reader)
-	WithWriteCloserArgument                              // is func(io.WriteCloser)
-	WithStringArgumentAndWriteCloserArgument             // is func(string, io.WriteCloser)
-	WithStructAndWriteCloserArgument                     // is func(Movie, io.WriteCloser)
-	WithMapAndWriteCloserArgument                        // is func(map[string]interface{}, io.WriteCloser)
-	WithImportedAndWriteCloserArgument                   // is func(types.IMovie, io.WriteCloser)
-	WithReaderAndWriteCloserArgument                     // is func(io.Reader, io.WriteCloser)
+	NoArgument                                    = iota + 15 // is func()
+	WithContextArgument                                       // is func(Context)
+	WithStringArgument                                        // is func(string)
+	WithStringSliceArgument                                   // is func(string)
+	WithMapArgument                                           // is func(map[string]interface{})
+	WithStructArgument                                        // is func(Movie)
+	WithImportedObjectArgument                                // is func(types.IMovie)
+	WithReaderArgument                                        // is func(io.Reader)
+	WithWriteCloserArgument                                   // is func(io.WriteCloser)
+	WithStringArgumentAndWriteCloserArgument                  // is func(string, io.WriteCloser)
+	WithStringSliceArgumentAndWriteCloserArgument             // is func(string, io.WriteCloser)
+	WithStructAndWriteCloserArgument                          // is func(Movie, io.WriteCloser)
+	WithMapAndWriteCloserArgument                             // is func(map[string]interface{}, io.WriteCloser)
+	WithImportedAndWriteCloserArgument                        // is func(types.IMovie, io.WriteCloser)
+	WithReaderAndWriteCloserArgument                          // is func(io.Reader, io.WriteCloser)
 	WithUnknownArgument
 )
 
@@ -69,6 +71,9 @@ var (
 		"hasContextArgument": func(d int) bool {
 			return d == WithContextArgument
 		},
+		"hasStringSliceArgument": func(d int) bool {
+			return d == WithStringSliceArgument
+		},
 		"hasStringArgument": func(d int) bool {
 			return d == WithStringArgument
 		},
@@ -92,6 +97,9 @@ var (
 		},
 		"hasArgumentStructUnexported": func(d int) bool {
 			return d == UnExportedImport
+		},
+		"hasStringSliceArgumentWithWriter": func(d int) bool {
+			return d == WithStringSliceArgumentAndWriteCloserArgument
 		},
 		"hasStringArgumentWithWriter": func(d int) bool {
 			return d == WithStringArgumentAndWriteCloserArgument

@@ -357,6 +357,16 @@ var ioWriteCloser = "io.WriteCloser"
 
 func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internals.VarMeta) {
 	switch arg.Type {
+	case "[]string":
+		if arg2 == nil {
+			return internals.WithStringSliceArgument, internals.VarMeta{}
+		}
+
+		if arg2.Type == ioWriteCloser {
+			return internals.WithStringSliceArgumentAndWriteCloserArgument, internals.VarMeta{}
+		}
+
+		return internals.WithUnknownArgument, internals.VarMeta{}
 	case "string":
 		if arg2 == nil {
 			return internals.WithStringArgument, internals.VarMeta{}

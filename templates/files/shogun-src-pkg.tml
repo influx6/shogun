@@ -236,6 +236,55 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
               {{end}}
             {{end}}
         {{end}}
+        {{if hasStringSliceArgument .Type }}
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}(args)
+              {{else}}
+                {{.RealName}}(args)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, args)
+              {{else}}
+                {{.RealName}}(ctx, args)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, args)
+              {{else}}
+                {{.RealName}}(ctx, args)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
         {{if hasMapArgument .Type }}
             var data map[string]interface{}
 
@@ -562,6 +611,55 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
               {{end}}
             {{end}}
         {{end}}
+        {{if hasStringSliceArgumentWithWriter .Type }}
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}(args, outgoing)
+              {{else}}
+                {{.RealName}}(args, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, args, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, args, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, args, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, args, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
         {{if hasReadArgumentWithWriter .Type }}
             {{if usesNoContext .Context }}
               {{if returnsError .Return }}
@@ -791,589 +889,797 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
         return ErrNoDefault
       {{else}}
       {{range .Main.Default}}
-          {{if hasNoArgument .Type }}
-              {{if usesNoContext .Context }}
-                {{if returnsError .Return }}
-                  return {{.RealName}}()
-                {{else}}
-                  {{.RealName}}()
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesGoogleContext .Context}}
-                var ctx gctx.Context
-                var canceller func()
-
-                if ctxTimeout == 0 {
-                  ctx = gctx.Background()
-                }else{
-                  ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
-                }
-
-                if canceller != nil {
-                  defer canceller()
-                }
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx)
-                {{else}}
-                  {{.RealName}}(ctx)
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesFauxContext .Context}}
-                var ctx context.CancelableContext
-
-                if ctxTimeout == 0 {
-                  ctx = context.NewCnclContext()
-                }else{
-                  ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
-                }
-
-                defer ctx.Cancel()
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx)
-                {{else}}
-                  {{.RealName}}(ctx)
-                  return nil
-                {{end}}
-              {{end}}
-          {{end}}
-          {{if hasContextArgument .Type }}
-              {{if usesGoogleContext .Context}}
-                var ctx gctx.Context
-                var canceller func()
-
-                if ctxTimeout == 0 {
-                  ctx = gctx.Background()
-                }else{
-                  ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
-                }
-
-                if canceller != nil {
-                  defer canceller()
-                }
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx)
-                {{else}}
-                  {{.RealName}}(ctx)
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesFauxContext .Context}}
-                var ctx context.CancelableContext
-
-                if ctxTimeout == 0 {
-                  ctx = context.NewCnclContext()
-                }else{
-                  ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
-                }
-
-                defer ctx.Cancel()
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx)
-                {{else}}
-                  {{.RealName}}(ctx)
-                  return nil
-                {{end}}
-              {{end}}
-          {{end}}
-          {{if hasMapArgument .Type }}
-              var data map[string]interface{}
-
-              if err := json.NewDecoder(incoming).Decode(&data); err != nil {
-                return fmt.Errorf("Expected Valid JSON: %+q", err)
-              }
-
-              {{if usesNoContext .Context }}
-                {{if returnsError .Return }}
-                  return {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                {{else}}
-                  {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesGoogleContext .Context}}
-                var ctx gctx.Context
-                var canceller func()
-
-                if ctxTimeout == 0 {
-                  ctx = gctx.Background()
-                }else{
-                  ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
-                }
-
-                if canceller != nil {
-                  defer canceller()
-                }
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                {{else}}
-                  {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesFauxContext .Context}}
-                var ctx context.CancelableContext
-
-                if ctxTimeout == 0 {
-                  ctx = context.NewCnclContext()
-                }else{
-                  ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
-                }
-
-                defer ctx.Cancel()
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                {{else}}
-                  {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                  return nil
-                {{end}}
-              {{end}}
-          {{end}}
-          {{if hasReadArgument .Type }}
-              {{if usesNoContext .Context }}
-                {{if returnsError .Return }}
-                  return {{.RealName}}(incoming)
-                {{else}}
-                  {{.RealName}}(incoming)
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesGoogleContext .Context}}
-                var ctx gctx.Context
-                var canceller func()
-
-                if ctxTimeout == 0 {
-                  ctx = gctx.Background()
-                }else{
-                  ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
-                }
-
-                if canceller != nil {
-                  defer canceller()
-                }
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, incoming)
-                {{else}}
-                  {{.RealName}}(ctx, incoming)
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesFauxContext .Context}}
-                var ctx context.CancelableContext
-
-                if ctxTimeout == 0 {
-                  ctx = context.NewCnclContext()
-                }else{
-                  ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
-                }
-
-                defer ctx.Cancel()
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, incoming)
-                {{else}}
-                  {{.RealName}}(ctx, incoming)
-                  return nil
-                {{end}}
-              {{end}}
-          {{end}}
-          {{if hasWriteArgument .Type }}
-              {{if usesNoContext .Context }}
-                {{if returnsError .Return }}
-                  return {{.RealName}}(outgoing)
-                {{else}}
-                  {{.RealName}}(outgoing)
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesGoogleContext .Context}}
-                var ctx gctx.Context
-                var canceller func()
-
-                if ctxTimeout == 0 {
-                  ctx = gctx.Background()
-                }else{
-                  ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
-                }
-
-                if canceller != nil {
-                  defer canceller()
-                }
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, outgoing)
-                {{else}}
-                  {{.RealName}}(ctx, outgoing)
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesFauxContext .Context}}
-                var ctx context.CancelableContext
-
-                if ctxTimeout == 0 {
-                  ctx = context.NewCnclContext()
-                }else{
-                  ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
-                }
-
-                defer ctx.Cancel()
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, outgoing)
-                {{else}}
-                  {{.RealName}}(ctx, outgoing)
-                  return nil
-                {{end}}
-              {{end}}
-          {{end}}
-          {{if hasStructArgument .Type }}
-              {{if hasPrefix .Imports.Type "*"}}
-              var data {{ trimPrefix .Imports.Type "*"}}
+        {{if hasNoArgument .Type }}
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}()
               {{else}}
-              var data {{.Imports.Type}}
+                {{.RealName}}()
+                return nil
               {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
 
-              if err := json.NewDecoder(incoming).Decode(&data); err != nil {
-                return fmt.Errorf("Expected Valid JSON: %+q", err)
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
-              {{if usesNoContext .Context }}
-                {{if returnsError .Return }}
-                  return {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                {{else}}
-                  {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesGoogleContext .Context}}
-                var ctx gctx.Context
-                var canceller func()
+              if canceller != nil {
+                defer canceller()
+              }
 
-                if ctxTimeout == 0 {
-                  ctx = gctx.Background()
-                }else{
-                  ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
-                }
-
-                if canceller != nil {
-                  defer canceller()
-                }
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                {{else}}
-                  {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesFauxContext .Context}}
-                var ctx context.CancelableContext
-
-                if ctxTimeout == 0 {
-                  ctx = context.NewCnclContext()
-                }else{
-                  ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
-                }
-
-                defer ctx.Cancel()
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                {{else}}
-                  {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                  return nil
-                {{end}}
-              {{end}}
-          {{end}}
-          {{if hasImportedArgument .Type }}
-              {{if hasPrefix .Imports.Type "*"}}
-              var data {{ trimPrefix .Imports.Type "*"}}
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx)
               {{else}}
-              var data {{.Imports.Type}}
+                {{.RealName}}(ctx)
+                return nil
               {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
 
-              if err := json.NewDecoder(incoming).Decode(&data); err != nil {
-                return fmt.Errorf("Expected Valid JSON: %+q", err)
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
               }
 
-              {{if usesNoContext .Context }}
-                {{if returnsError .Return }}
-                  return {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                {{else}}
-                  {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesGoogleContext .Context}}
-                var ctx gctx.Context
-                var canceller func()
+              defer ctx.Cancel()
 
-                if ctxTimeout == 0 {
-                  ctx = gctx.Background()
-                }else{
-                  ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
-                }
-
-                if canceller != nil {
-                  defer canceller()
-                }
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                {{else}}
-                  {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesFauxContext .Context}}
-                var ctx context.CancelableContext
-
-                if ctxTimeout == 0 {
-                  ctx = context.NewCnclContext()
-                }else{
-                  ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
-                }
-
-                defer ctx.Cancel()
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                {{else}}
-                  {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
-                  return nil
-                {{end}}
-              {{end}}
-          {{end}}
-          {{if hasReadArgumentWithWriter .Type }}
-              {{if usesNoContext .Context }}
-                {{if returnsError .Return }}
-                  return {{.RealName}}(incoming, outgoing)
-                {{else}}
-                  {{.RealName}}(incoming, outgoing)
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesGoogleContext .Context}}
-                var ctx gctx.Context
-                var canceller func()
-
-                if ctxTimeout == 0 {
-                  ctx = gctx.Background()
-                }else{
-                  ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
-                }
-
-                if canceller != nil {
-                  defer canceller()
-                }
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, incoming, outgoing)
-                {{else}}
-                  {{.RealName}}(ctx, incoming, outgoing)
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesFauxContext .Context}}
-                var ctx context.CancelableContext
-
-                if ctxTimeout == 0 {
-                  ctx = context.NewCnclContext()
-                }else{
-                  ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
-                }
-
-                defer ctx.Cancel()
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, incoming, outgoing)
-                {{else}}
-                  {{.RealName}}(ctx, incoming, outgoing)
-                  return nil
-                {{end}}
-              {{end}}
-          {{end}}
-          {{if hasStructArgumentWithWriter .Type }}
-              {{if hasPrefix .Imports.Type "*"}}
-              var data {{ trimPrefix .Imports.Type "*"}}
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx)
               {{else}}
-              var data {{.Imports.Type}}
+                {{.RealName}}(ctx)
+                return nil
               {{end}}
+            {{end}}
+        {{end}}
+        {{if hasContextArgument .Type }}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
 
-              if err := json.NewDecoder(incoming).Decode(&data); err != nil {
-                return fmt.Errorf("Expected Valid JSON: %+q", err)
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
-              {{if usesNoContext .Context }}
-                {{if returnsError .Return }}
-                  return {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                {{else}}
-                  {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesGoogleContext .Context}}
-                var ctx gctx.Context
-                var canceller func()
-
-                if ctxTimeout == 0 {
-                  ctx = gctx.Background()
-                }else{
-                  ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
-                }
-
-                if canceller != nil {
-                  defer canceller()
-                }
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                {{else}}
-                  {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesFauxContext .Context}}
-                var ctx context.CancelableContext
-
-                if ctxTimeout == 0 {
-                  ctx = context.NewCnclContext()
-                }else{
-                  ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
-                }
-
-                defer ctx.Cancel()
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                {{else}}
-                  {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                  return nil
-                {{end}}
-              {{end}}
-          {{end}}
-          {{if hasMapArgumentWithWriter .Type }}
-              var data map[string]interface{}
-
-              if err := json.NewDecoder(incoming).Decode(&data); err != nil {
-                return fmt.Errorf("Expected Valid JSON: %+q", err)
+              if canceller != nil {
+                defer canceller()
               }
 
-              {{if usesNoContext .Context }}
-                {{if returnsError .Return }}
-                  return {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                {{else}}
-                  {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesGoogleContext .Context}}
-                var ctx gctx.Context
-                var canceller func()
-
-                if ctxTimeout == 0 {
-                  ctx = gctx.Background()
-                }else{
-                  ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
-                }
-
-                if canceller != nil {
-                  defer canceller()
-                }
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                {{else}}
-                  {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                  return nil
-                {{end}}
-              {{end}}
-              {{if usesFauxContext .Context}}
-                var ctx context.CancelableContext
-
-                if ctxTimeout == 0 {
-                  ctx = context.NewCnclContext()
-                }else{
-                  ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
-                }
-
-                defer ctx.Cancel()
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                {{else}}
-                  {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                  return nil
-                {{end}}
-              {{end}}
-          {{end}}
-          {{if hasImportedArgumentWithWriter .Type }}
-              {{if hasPrefix .Imports.Type "*"}}
-              var data {{ trimPrefix .Imports.Type "*"}}
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx)
               {{else}}
-              var data {{.Imports.Type}}
+                {{.RealName}}(ctx)
+                return nil
               {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
 
-              if err := json.NewDecoder(incoming).Decode(&data); err != nil {
-                return fmt.Errorf("Expected Valid JSON: %+q", err)
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
               }
 
-              {{if usesNoContext .Context }}
-                {{if returnsError .Return }}
-                  return {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                {{else}}
-                  {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                  return nil
-                {{end}}
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx)
+              {{else}}
+                {{.RealName}}(ctx)
+                return nil
               {{end}}
-              {{if usesGoogleContext .Context}}
-                var ctx gctx.Context
-                var canceller func()
+            {{end}}
+        {{end}}
+        {{if hasStringArgument .Type }}
+            var data bytes.Buffer
 
-                if ctxTimeout == 0 {
-                  ctx = gctx.Background()
-                }else{
-                  ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
-                }
+            if _, err := io.Copy(&data, incoming); err != nil && err != io.EOF {
+              return err
+            }
 
-                if canceller != nil {
-                  defer canceller()
-                }
-
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                {{else}}
-                  {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                  return nil
-                {{end}}
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}(data.String())
+              {{else}}
+                {{.RealName}}(data.String())
+                return nil
               {{end}}
-              {{if usesFauxContext .Context}}
-                var ctx context.CancelableContext
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
 
-                if ctxTimeout == 0 {
-                  ctx = context.NewCnclContext()
-                }else{
-                  ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
-                }
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
 
-                defer ctx.Cancel()
+              if canceller != nil {
+                defer canceller()
+              }
 
-                {{if returnsError .Return }}
-                  return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                {{else}}
-                  {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
-                  return nil
-                {{end}}
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, data.String())
+              {{else}}
+                {{.RealName}}(ctx, data.String())
+                return nil
               {{end}}
-          {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, data.String())
+              {{else}}
+                {{.RealName}}(ctx, data.String())
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasStringSliceArgument .Type }}
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}(args)
+              {{else}}
+                {{.RealName}}(args)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, args)
+              {{else}}
+                {{.RealName}}(ctx, args)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, args)
+              {{else}}
+                {{.RealName}}(ctx, args)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasMapArgument .Type }}
+            var data map[string]interface{}
+
+            if err := json.NewDecoder(incoming).Decode(&data); err != nil {
+              return fmt.Errorf("Expected Valid JSON: %+q", err)
+            }
+
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+              {{else}}
+                {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+              {{else}}
+                {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+              {{else}}
+                {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasReadArgument .Type }}
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}(incoming)
+              {{else}}
+                {{.RealName}}(incoming)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, incoming)
+              {{else}}
+                {{.RealName}}(ctx, incoming)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, incoming)
+              {{else}}
+                {{.RealName}}(ctx, incoming)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasWriteArgument .Type }}
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}(outgoing)
+              {{else}}
+                {{.RealName}}(outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasStructArgument .Type }}
+            {{if hasPrefix .Imports.Type "*"}}
+            var data {{ trimPrefix .Imports.Type "*"}}
+            {{else}}
+            var data {{.Imports.Type}}
+            {{end}}
+
+            if err := json.NewDecoder(incoming).Decode(&data); err != nil {
+              return fmt.Errorf("Expected Valid JSON: %+q", err)
+            }
+
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+              {{else}}
+                {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+              {{else}}
+                {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+              {{else}}
+                {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasImportedArgument .Type }}
+            {{if hasPrefix .Imports.Type "*"}}
+            var data {{ trimPrefix .Imports.Type "*"}}
+            {{else}}
+            var data {{.Imports.Type}}
+            {{end}}
+
+            if err := json.NewDecoder(incoming).Decode(&data); err != nil {
+              return fmt.Errorf("Expected Valid JSON: %+q", err)
+            }
+
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+              {{else}}
+                {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+              {{else}}
+                {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+              {{else}}
+                {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasStringArgumentWithWriter .Type }}
+            var data bytes.Buffer
+
+            if _, err := io.Copy(&data, incoming); err != nil && err != io.EOF {
+              return err
+            }
+
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}(data.String(), outgoing)
+              {{else}}
+                {{.RealName}}(data.String(), outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, data.String(), outgoing)
+              {{else}}
+                {{.RealName}}(ctx, data.String(), outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, data.String(), outgoing)
+              {{else}}
+                {{.RealName}}(ctx, data.String(), outgoing)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasStringSliceArgumentWithWriter .Type }}
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}(args, outgoing)
+              {{else}}
+                {{.RealName}}(args, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, args, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, args, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, args, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, args, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasReadArgumentWithWriter .Type }}
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}(incoming, outgoing)
+              {{else}}
+                {{.RealName}}(incoming, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, incoming, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, incoming, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, incoming, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, incoming, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasStructArgumentWithWriter .Type }}
+            {{if hasPrefix .Imports.Type "*"}}
+            var data {{ trimPrefix .Imports.Type "*"}}
+            {{else}}
+            var data {{.Imports.Type}}
+            {{end}}
+
+            if err := json.NewDecoder(incoming).Decode(&data); err != nil {
+              return fmt.Errorf("Expected Valid JSON: %+q", err)
+            }
+
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+              {{else}}
+                {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasMapArgumentWithWriter .Type }}
+            var data map[string]interface{}
+
+            if err := json.NewDecoder(incoming).Decode(&data); err != nil {
+              return fmt.Errorf("Expected Valid JSON: %+q", err)
+            }
+
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+              {{else}}
+                {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
+        {{if hasImportedArgumentWithWriter .Type }}
+            {{if hasPrefix .Imports.Type "*"}}
+            var data {{ trimPrefix .Imports.Type "*"}}
+            {{else}}
+            var data {{.Imports.Type}}
+            {{end}}
+
+            if err := json.NewDecoder(incoming).Decode(&data); err != nil {
+              return fmt.Errorf("Expected Valid JSON: %+q", err)
+            }
+
+            {{if usesNoContext .Context }}
+              {{if returnsError .Return }}
+                return {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+              {{else}}
+                {{.RealName}}({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesGoogleContext .Context}}
+              var ctx gctx.Context
+              var canceller func()
+
+              if ctxTimeout == 0 {
+                ctx = gctx.Background()
+              }else{
+                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+              }
+
+              if canceller != nil {
+                defer canceller()
+              }
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+            {{if usesFauxContext .Context}}
+              var ctx context.CancelableContext
+
+              if ctxTimeout == 0 {
+                ctx = context.NewCnclContext()
+              }else{
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+              }
+
+              defer ctx.Cancel()
+
+              {{if returnsError .Return }}
+                return {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+              {{else}}
+                {{.RealName}}(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, outgoing)
+                return nil
+              {{end}}
+            {{end}}
+        {{end}}
       {{end}}
       {{end}}
   }

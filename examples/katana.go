@@ -32,6 +32,16 @@ func Buba(ctx context.CancelContext, name string) {
 	fmt.Printf("Welcome Buba %q.\n", name)
 }
 
+// Bubas is slice of bub.
+func Bubas(ctx context.CancelContext, names []string) {
+	fmt.Printf("Welcome Buba city %q.\n", names)
+}
+
+// BubasMetro is slice of bub.
+func BubasMetro(ctx context.CancelContext, names []string, w io.WriteCloser) {
+	fmt.Printf("Welcome Buba metro city %q.\n", names)
+}
+
 func Bob(ctx context.CancelContext) error {
 	return nil
 }

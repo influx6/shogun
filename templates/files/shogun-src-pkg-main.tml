@@ -36,10 +36,6 @@ func main(){
 				Name:  "t,timeout",
 				Usage: "-t=4m to set timeout for function using context",
 			},
-			cli.StringFlag{
-				Name:  "in,input",
-				Usage: "-in= to given a one time value as input for the function",
-			},
 	}
 
 	app.Commands = []cli.Command{
@@ -74,15 +70,14 @@ func helpAction(c *cli.Context) error {
 }
 
 func mainAction(c *cli.Context) error {
-	var input io.Reader
+	input := io.Reader(os.Stdin)
 
-	providedInput := c.String("input")
-	if providedInput != "" {
-		input = bytes.NewReader([]byte(providedInput))
-	}else{
-		input = os.Stdin
+	// if data is coming through stdin then rock with that else
+	// loaded rest of arguments has data.
+	tail := c.Args().Tail()
+	if !stdinHasData() && len(tail) != 0 {
+		input = bytes.NewBufferString(strings.Join(tail, " "))
 	}
-
 
 	tm := makeDuration(c.String("timeout"), 0)
 	if err := pkg.MainShogunExecute(
@@ -127,6 +122,20 @@ type wopCloser struct{
 // Close does nothing.
 func (wopCloser) Close() error {
 	return nil
+}
+
+// stdinHasData returns true/false if data is allocated into stdin.
+func stdinHasData() bool {
+	stat, err := os.Stdin.Stat()
+	if err != nil {
+		return false
+	}
+
+	if stat.Size() == 0 {
+		return false
+	}
+
+	return true
 }
 
 var elapso = regexp.MustCompile(`(\d+)(\w+)`)
