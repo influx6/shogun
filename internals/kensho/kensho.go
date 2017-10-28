@@ -62,7 +62,7 @@ func TestWriterFunction(fun internals.ShogunFunc) {
 
 			return nil
 		}, 0)
-	case internals.UseFauxCancelContext:
+	case internals.UseFauxContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
 			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, wopCloser{Writer: &outgoing})
@@ -131,7 +131,7 @@ func TestReaderFunction(fun internals.ShogunFunc) {
 
 			return nil
 		}, 0)
-	case internals.UseFauxCancelContext:
+	case internals.UseFauxContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
 			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, &incoming)
@@ -201,7 +201,7 @@ func TestReaderWithWriterFunction(fun internals.ShogunFunc) {
 
 			return nil
 		}, 0)
-	case internals.UseFauxCancelContext:
+	case internals.UseFauxContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
 			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, &incoming, wopCloser{Writer: &outgoing})
@@ -281,7 +281,7 @@ func TestMapFunction(fun internals.ShogunFunc) {
 
 			return nil
 		}, 0)
-	case internals.UseFauxCancelContext:
+	case internals.UseFauxContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
 			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, data)
@@ -357,7 +357,7 @@ func TestMapWithWriterFunction(fun internals.ShogunFunc) {
 
 			return nil
 		}, 0)
-	case internals.UseFauxCancelContext:
+	case internals.UseFauxContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
 			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, data, wopCloser{Writer: &outgoing})
@@ -428,7 +428,7 @@ func TestNoArgumentFunction(fun internals.ShogunFunc) {
 
 			return nil
 		}, 0)
-	case internals.UseFauxCancelContext:
+	case internals.UseFauxContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
 			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx)
@@ -498,7 +498,7 @@ func TestStringFunction(fun internals.ShogunFunc) {
 
 			return nil
 		}, 0)
-	case internals.UseFauxCancelContext:
+	case internals.UseFauxContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
 			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, incoming.String())
@@ -568,7 +568,7 @@ func TestStringWithWriterFunction(fun internals.ShogunFunc) {
 
 			return nil
 		}, 0)
-	case internals.UseFauxCancelContext:
+	case internals.UseFauxContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
 			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, incoming.String(), wopCloser{Writer: &outgoing})
