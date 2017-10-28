@@ -426,10 +426,20 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (internals.ArgType, i
 
 			if len(arg.Type) != 0 {
 				name := strings.TrimPrefix(arg.Type, "*")
-				if unicode.IsLower(rune(name[0])) {
-					params.Exported = internals.UnExportedImport
+
+				if !strings.Contains(name, ".") {
+					if unicode.IsLower(rune(name[0])) {
+						params.Exported = internals.UnExportedImport
+					} else {
+						params.Exported = internals.ExportedImport
+					}
 				} else {
-					params.Exported = internals.ExportedImport
+					parts := strings.Split(name, ".")
+					if unicode.IsLower(rune(parts[1][0])) {
+						params.Exported = internals.UnExportedImport
+					} else {
+						params.Exported = internals.ExportedImport
+					}
 				}
 			}
 
