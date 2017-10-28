@@ -48,7 +48,9 @@ func Bob(ctx context.CancelContext) error {
 
 // Jija does something.
 // @flag(name => time, env => JIJA_TIME, type => Duration, desc => specifies time for jija)
-func Jija(ctx context.CancelContext, mp ty.Woofer) error {
+func Jija(ctx context.Context, mp ty.Woofer) error {
+	duration, _ := ctx.Bag().GetDuration("time")
+	fmt.Printf("Jija received duration %+q\n", duration)
 	return nil
 }
 

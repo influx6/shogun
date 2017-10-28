@@ -35,6 +35,11 @@ type ValueBag interface {
 	WithValue(key interface{}, value interface{}) ValueBag
 }
 
+// CancelContext defines a type which provides Done signal for cancelling operations.
+type CancelContext interface {
+	Done() <-chan struct{}
+}
+
 // Context defines a type which holds a cancel signal and contains
 // a bag of values.
 type Context interface {
@@ -42,14 +47,9 @@ type Context interface {
 	Bag() ValueBag
 }
 
-// CancelContext defines a type which provides Done signal for cancelling operations.
-type CancelContext interface {
-	Done() <-chan struct{}
-}
-
 // CancelableContext defines a type which provides Done signal for cancelling operations.
 type CancelableContext interface {
-	Done() <-chan struct{}
+	Context
 	Cancel()
 }
 
