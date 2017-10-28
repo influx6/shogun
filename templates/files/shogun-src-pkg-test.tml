@@ -311,7 +311,7 @@ func test{{.Name}}Function(fun internals.ShogunFunc) {
 
 			return nil
 		}, 0)
-	case internals.UseFauxCancelContext:
+	case internals.UseFauxContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
 			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
@@ -403,7 +403,7 @@ func test{{.Name}}Function(fun internals.ShogunFunc) {
 
 			return nil
 		}, 0)
-	case internals.UseFauxCancelContext:
+	case internals.UseFauxContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
 			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
@@ -495,7 +495,7 @@ func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 
 			return nil
 		}, 0)
-	case internals.UseFauxCancelContext:
+	case internals.UseFauxContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
 			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
@@ -591,7 +591,7 @@ func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 
 			return nil
 		}, 0)
-	case internals.UseFauxCancelContext:
+	case internals.UseFauxContext:
 		err = execWithContext(func(ctx context.CancelContext) error {
 			if fun.Return == internals.NoReturn {
 				realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
