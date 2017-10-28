@@ -98,7 +98,7 @@ func mainAction(c *cli.Context) error {
 		defer os.Exit(1)
 
 		// Write error to stderr and only return err if attempt to write json failed.
-		if jserr := json.NewEncoder(os.Stderr).Encode(struct{
+		return json.NewEncoder(os.Stderr).Encode(struct{
 			Err error `json:"error"`
 			Method string `json:"method"`
 			Args []string `json:"arguments"`
@@ -110,11 +110,7 @@ func mainAction(c *cli.Context) error {
 			Message: err.Error(),
 			Args: c.Args().Tail(),
 			Method: c.Args().First(),
-		}); jserr != nil {
-			return jserr
-		}
-
-		return nil
+		})
 	}
 
 	return nil
