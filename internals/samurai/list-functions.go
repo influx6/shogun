@@ -493,11 +493,18 @@ func getContextState(arg ast.ArgType) (internals.ContextType, internals.VarMeta)
 			return internals.UseFauxContext, imp
 		}
 
+	case "context.CancelableContext":
+		if arg.Import.Path == fauxContext {
+			imp.Import = fauxContext
+			imp.ImportNick = arg.Import.Name
+			return internals.UseFauxContext, imp
+		}
+
 	case "context.CancelContext":
 		if arg.Import.Path == fauxContext {
 			imp.Import = fauxContext
 			imp.ImportNick = arg.Import.Name
-			return internals.UseFauxCancelContext, imp
+			return internals.UseFauxContext, imp
 		}
 	}
 

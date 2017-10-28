@@ -152,7 +152,6 @@ const (
 	NoContext ContextType = iota + 1
 	UseGoogleContext
 	UseFauxContext
-	UseFauxCancelContext
 	UseUnknownContext
 )
 
@@ -197,8 +196,7 @@ var (
 			return d == UseGoogleContext
 		},
 		"usesFauxContext": func(d ContextType) bool {
-			cd := d
-			return cd == UseFauxContext || cd == UseFauxCancelContext
+			return d == UseFauxContext
 		},
 		"hasArgumentStructExported": func(d ExportType) bool {
 			return d == ExportedImport
@@ -374,7 +372,7 @@ func (pn PackageFunctions) Default() []Function {
 // HasFauxImports returns true/false if any part of the function uses faux context.
 func (pn PackageFunctions) HasFauxImports() bool {
 	for _, item := range pn.List {
-		if item.Context == UseFauxCancelContext {
+		if item.Context == UseFauxContext {
 			return true
 		}
 	}
