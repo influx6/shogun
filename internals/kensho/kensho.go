@@ -601,9 +601,9 @@ func execWithContext(fun interface{}, ctxTimeout time.Duration) error {
 		var ctx context.CancelableContext
 
 		if ctxTimeout == 0 {
-			ctx = context.NewCnclContext()
+			ctx = context.NewCnclContext(nil)
 		} else {
-			ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+			ctx = context.NewExpiringCnclContext(nil, ctxTimeout, nil)
 		}
 
 		defer ctx.Cancel()

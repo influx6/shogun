@@ -15,3 +15,8 @@ Produces Outgoing data through STDOut.{{end}}{{if hasMapArgumentWithWriter .Type
 Produces Outgoing data through STDOut.{{end}}{{if hasImportedArgumentWithWriter .Type }}Expects JSON data through STDIn.
 Produces Outgoing data through STDOut.{{end}}{{if hasStringArgumentWithWriter .Type }}Expects string data through STDIn.
 Produces Outgoing data through STDOut.{{end}}{{if hasStringArgument .Type }}Expects string data through STDIn.{{end}}
+
+FLAGS:
+{{if eq (len .Flags) 0}}None.{{else}}{{range .Flags}}
+- {{.Name}}{{if notempty .EnvVar}}(Alias: Environment Variable: {{quote .EnvVar }}){{end}}: {{.Desc}}
+{{end}}{{end}}

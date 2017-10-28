@@ -46,6 +46,8 @@ func Bob(ctx context.CancelContext) error {
 	return nil
 }
 
+// Jija does something.
+// @flag(name => time, env => JIJA_TIME, type => Duration, desc => specifies time for jija)
 func Jija(ctx context.CancelContext, mp ty.Woofer) error {
 	return nil
 }

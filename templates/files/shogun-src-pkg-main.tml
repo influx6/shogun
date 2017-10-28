@@ -72,17 +72,20 @@ func helpAction(c *cli.Context) error {
 func mainAction(c *cli.Context) error {
 	input := io.Reader(os.Stdin)
 
-	// if data is coming through stdin then rock with that else
-	// loaded rest of arguments has data.
-	tail := c.Args().Tail()
-	if !stdinHasData() && len(tail) != 0 {
-		input = bytes.NewBufferString(strings.Join(tail, " "))
+	flags, args := internals.FilterFlags(c.Args().Tail())
+	if !stdinHasData() && len(args) != 0 {
+		input = bytes.NewBufferString(strings.Join(args, " "))
 	}
 
-	tm := makeDuration(c.String("timeout"), 0)
+	tm, terr := time.ParseDuration(c.String("timeout"))
+	if terr != nil {
+		tm = 0
+	}
+
 	if err := pkg.MainShogunExecute(
 		c.Args().First(),
 		c.Args().Tail(),
+		flags,
 		input,
 		wopCloser{Writer: os.Stdout},
 		tm,
@@ -98,13 +101,15 @@ func mainAction(c *cli.Context) error {
 		if jserr := json.NewEncoder(os.Stderr).Encode(struct{
 			Err error `json:"error"`
 			Method string `json:"method"`
+			Args []string `json:"arguments"`
 			Message string `json:"message"`
 			Timeout time.Duration `json:"duration"`
 		}{
 			Err: err,
 			Timeout: tm,
+			Message: err.Error(),
+			Args: c.Args().Tail(),
 			Method: c.Args().First(),
-			Message: fmt.Sprintf("Command %+q failed with error", c.Args().First()),
 		}); jserr != nil {
 			return jserr
 		}
@@ -136,50 +141,4 @@ func stdinHasData() bool {
 	}
 
 	return true
-}
-
-var elapso = regexp.MustCompile(`(\d+)(\w+)`)
-func makeDuration(target string, def int) time.Duration {
-	if !elapso.MatchString(target) {
-		return time.Duration(def)
-	}
-
-	matchs := elapso.FindAllStringSubmatch(target, -1)
-	if len(matchs) <= 0 {
-		return time.Duration(def)
-	}
-
-	match := matchs[0]
-
-	if len(match) < 3 {
-		return time.Duration(def)
-	}
-
-	dur := time.Duration(convertToInt(match[1], def))
-	mtype := match[2]
-
-	switch mtype {
-	case "s":
-		return dur * time.Second
-	case "mcs":
-		return dur * time.Microsecond
-	case "ns":
-		return dur * time.Nanosecond
-	case "ms":
-		return dur * time.Millisecond
-	case "m":
-		return dur * time.Minute
-	case "h":
-		return dur * time.Hour
-	default:
-		return time.Duration(dur) * time.Second
-	}
-}
-
-func convertToInt(target string, def int) int {
-	fo, err := strconv.Atoi(target)
-	if err != nil {
-		return def
-	}
-	return fo
 }

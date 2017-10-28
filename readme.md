@@ -255,14 +255,20 @@ func Bob(ctx context.CancelContext, name string) error {
 	return nil
 }
 
-func Jija(ctx context.CancelContext, mp ty.Woofer) error {
+//@flag(name => time, env => JIJA_TIME, type => Duration, desc => specifies time for jija)
+func Jija(ctx context.Context, mp ty.Woofer) error {
+  jijatime, found := ctx.Bag().GetDuration("time")
+
 	return nil
 }
 ```
 
 In shogun, you can tag a function as the default function to be executed every it's
-binary is called without argument through shogun or through it's generated binary, by tagging it
-with a `@default` annotation.
+binary is called without argument through shogun or through it's generated binary, by tagging it with a `@default` annotation.
+
+Shogun also supports function level flags, where a function using annotation can
+specify particular flags which it will access from the either the `Context` package
+if passed in, except for `CancelContext` which only functions for cancelation.
 
 
 ### Using Context

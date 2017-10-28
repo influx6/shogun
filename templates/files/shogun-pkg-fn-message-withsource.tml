@@ -16,5 +16,10 @@ Produces Outgoing data through STDOut.{{end}}{{if hasImportedArgumentWithWriter 
 Produces Outgoing data through STDOut.{{end}}{{if hasStringArgumentWithWriter .Type }}Expects string data through STDIn.
 Produces Outgoing data through STDOut.{{end}}{{if hasStringArgument .Type }}Expects string data through STDIn.{{end}}
 
+FLAGS:
+{{if eq (len .Flags) 0}}None.{{else}}{{range .Flags}}
+- {{.Name}}{{if notempty .EnvVar}} (Environment Variable: {{.EnvVar }}) {{end}}: {{.Desc}}
+{{end}}{{end}}
+
 SOURCE:
 {{.Source}}

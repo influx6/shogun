@@ -594,6 +594,23 @@ type StructDeclaration struct {
 	Associations map[string]AnnotationAssociationDeclaration `json:"associations"`
 }
 
+// AnnotationsFor returns all annotations with the giving name.
+func (str StructDeclaration) AnnotationsFor(typeName string) []AnnotationDeclaration {
+	typeName = strings.TrimPrefix(typeName, "@")
+
+	var found []AnnotationDeclaration
+
+	for _, item := range str.Annotations {
+		if strings.TrimPrefix(item.Name, "@") != typeName {
+			continue
+		}
+
+		found = append(found, item)
+	}
+
+	return found
+}
+
 // TypeDeclaration defines a type which holds annotation data for a giving type declaration.
 type TypeDeclaration struct {
 	From         int                                         `json:"from"`
@@ -608,6 +625,23 @@ type TypeDeclaration struct {
 	Position     token.Pos                                   `json:"position"`
 	Annotations  []AnnotationDeclaration                     `json:"annotations"`
 	Associations map[string]AnnotationAssociationDeclaration `json:"associations"`
+}
+
+// AnnotationsFor returns all annotations with the giving name.
+func (ty TypeDeclaration) AnnotationsFor(typeName string) []AnnotationDeclaration {
+	typeName = strings.TrimPrefix(typeName, "@")
+
+	var found []AnnotationDeclaration
+
+	for _, item := range ty.Annotations {
+		if strings.TrimPrefix(item.Name, "@") != typeName {
+			continue
+		}
+
+		found = append(found, item)
+	}
+
+	return found
 }
 
 //===========================================================================================================
@@ -636,6 +670,23 @@ type FuncDeclaration struct {
 	Arguments     *ast.FieldList                              `json:"arguments"`
 	Annotations   []AnnotationDeclaration                     `json:"annotations"`
 	Associations  map[string]AnnotationAssociationDeclaration `json:"associations"`
+}
+
+// AnnotationsFor returns all annotations with the giving name.
+func (fun FuncDeclaration) AnnotationsFor(typeName string) []AnnotationDeclaration {
+	typeName = strings.TrimPrefix(typeName, "@")
+
+	var found []AnnotationDeclaration
+
+	for _, item := range fun.Annotations {
+		if strings.TrimPrefix(item.Name, "@") != typeName {
+			continue
+		}
+
+		found = append(found, item)
+	}
+
+	return found
 }
 
 // GetAnnotation returns AnnotationDeclaration if giving FuncDeclaration has annotation at package level.

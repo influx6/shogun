@@ -20,9 +20,10 @@ import (
 )
 
 const (
-	defaultDesc   = "No description provided."
-	fauxContext   = "github.com/influx6/faux/context"
-	googleContext = "context"
+	defaultDesc        = "No description provided."
+	fauxContext        = "github.com/influx6/faux/context"
+	googleContext      = "context"
+	flagAnnotationName = "flag"
 )
 
 // errors.
@@ -241,9 +242,9 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 	argLen := len(def.Args)
 	retLen := len(def.Returns)
 
-	var returnType int
-	var argumentType int
-	var contextType int
+	var returnType internals.ReturnType
+	var argumentType internals.ArgType
+	var contextType internals.ContextType
 
 	var importList, ctxImport internals.VarMeta
 
@@ -294,6 +295,18 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 		return fn, true, nil
 	}
 
+	var flags []internals.Flag
+
+	for _, flagAnnotation := range function.AnnotationsFor("@flag") {
+		flags = append(flags, internals.Flag{
+			Name:   strings.TrimSpace(flagAnnotation.Param("name")),
+			EnvVar: strings.TrimSpace(flagAnnotation.Param("env")),
+			Desc:   strings.TrimSpace(flagAnnotation.Param("desc")),
+			Type:   internals.GetFlag(strings.TrimSpace(flagAnnotation.Param("type"))),
+		})
+	}
+
+	fn.Flags = flags
 	fn.RealName = def.Name
 	fn.Type = argumentType
 	fn.Return = returnType
@@ -355,7 +368,7 @@ func pullFunction(function *ast.FuncDeclaration, declr *ast.PackageDeclaration) 
 
 var ioWriteCloser = "io.WriteCloser"
 
-func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internals.VarMeta) {
+func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (internals.ArgType, internals.VarMeta) {
 	switch arg.Type {
 	case "[]string":
 		if arg2 == nil {
@@ -366,7 +379,6 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internals.VarMe
 			return internals.WithStringSliceArgumentAndWriteCloserArgument, internals.VarMeta{}
 		}
 
-		return internals.WithUnknownArgument, internals.VarMeta{}
 	case "string":
 		if arg2 == nil {
 			return internals.WithStringArgument, internals.VarMeta{}
@@ -376,7 +388,6 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internals.VarMe
 			return internals.WithStringArgumentAndWriteCloserArgument, internals.VarMeta{}
 		}
 
-		return internals.WithUnknownArgument, internals.VarMeta{}
 	case "io.Reader":
 		if arg2 == nil {
 			return internals.WithReaderArgument, internals.VarMeta{}
@@ -386,12 +397,11 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internals.VarMe
 			return internals.WithReaderAndWriteCloserArgument, internals.VarMeta{}
 		}
 
-		return internals.WithUnknownArgument, internals.VarMeta{}
 	case "io.WriteCloser":
 		if arg2 == nil {
 			return internals.WithWriteCloserArgument, internals.VarMeta{}
 		}
-		return internals.WithUnknownArgument, internals.VarMeta{}
+
 	case "map[string]interface{}":
 		if arg2 == nil {
 			return internals.WithMapArgument, internals.VarMeta{}
@@ -401,7 +411,6 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internals.VarMe
 			return internals.WithMapAndWriteCloserArgument, internals.VarMeta{}
 		}
 
-		return internals.WithUnknownArgument, internals.VarMeta{}
 	default:
 		params := internals.VarMeta{
 			Type:       arg.Type,
@@ -456,7 +465,7 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (int, internals.VarMe
 	return internals.WithUnknownArgument, internals.VarMeta{}
 }
 
-func getReturnState(arg ast.ArgType) int {
+func getReturnState(arg ast.ArgType) internals.ReturnType {
 	switch arg.Type {
 	case "error":
 		return internals.ErrorReturn
@@ -465,7 +474,7 @@ func getReturnState(arg ast.ArgType) int {
 	return internals.UnknownErrorReturn
 }
 
-func getContextState(arg ast.ArgType) (int, internals.VarMeta) {
+func getContextState(arg ast.ArgType) (internals.ContextType, internals.VarMeta) {
 	var imp internals.VarMeta
 	imp.Type = arg.Type
 	imp.TypeAddr = arg.ExType
@@ -477,14 +486,19 @@ func getContextState(arg ast.ArgType) (int, internals.VarMeta) {
 			imp.ImportNick = arg.Import.Name
 			return internals.UseGoogleContext, imp
 		}
-		return internals.UseUnknownContext, imp
+
+		if arg.Import.Path == fauxContext {
+			imp.Import = fauxContext
+			imp.ImportNick = arg.Import.Name
+			return internals.UseFauxContext, imp
+		}
+
 	case "context.CancelContext":
 		if arg.Import.Path == fauxContext {
 			imp.Import = fauxContext
 			imp.ImportNick = arg.Import.Name
 			return internals.UseFauxCancelContext, imp
 		}
-		return internals.UseUnknownContext, imp
 	}
 
 	return internals.UseUnknownContext, imp

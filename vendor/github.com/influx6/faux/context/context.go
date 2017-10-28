@@ -23,21 +23,24 @@ type Getter interface {
 	GetString(key interface{}) (string, bool)
 	GetFloat32(key interface{}) (float32, bool)
 	GetFloat64(key interface{}) (float64, bool)
+	GetDuration(key interface{}) (time.Duration, bool)
 }
 
-// ValueBagContext defines a context for holding values to be shared across processes..
-type ValueBagContext interface {
+// ValueBag defines a context for holding values to be shared across processes..
+type ValueBag interface {
 	Getter
-
-	// Set adds a key and value pair into the context store.
-	Set(key interface{}, value interface{})
 
 	// WithValue returns a new context then adds the key and value pair into the
 	// context's store.
-	WithValue(key interface{}, value interface{}) ValueBagContext
+	WithValue(key interface{}, value interface{}) ValueBag
 }
 
-//==============================================================================
+// Context defines a type which holds a cancel signal and contains
+// a bag of values.
+type Context interface {
+	CancelContext
+	Bag() ValueBag
+}
 
 // CancelContext defines a type which provides Done signal for cancelling operations.
 type CancelContext interface {
@@ -54,6 +57,7 @@ type CancelableContext interface {
 type CnclContext struct {
 	close chan struct{}
 	once  sync.Once
+	bag   ValueBag
 }
 
 // MakeGoogleContextFrom returns a goole context package instance by using the CancelContext
@@ -68,8 +72,17 @@ func MakeGoogleContextFrom(ctx CancelContext) gcontext.Context {
 }
 
 // NewCnclContext returns a new instance of the CnclContext.
-func NewCnclContext() *CnclContext {
-	return &CnclContext{close: make(chan struct{})}
+func NewCnclContext(bag ValueBag) *CnclContext {
+	return &CnclContext{close: make(chan struct{}), bag: bag}
+}
+
+// Bag returns an associated ValueBag for this instance.
+func (cn *CnclContext) Bag() ValueBag {
+	if cn.bag == nil {
+		cn.bag = NewValueBag()
+	}
+
+	return cn.bag
 }
 
 // Cancel closes the internal channel of the contxt
@@ -91,11 +104,13 @@ type ExpiringCnclContext struct {
 	action   func()
 	once     sync.Once
 	duration time.Duration
+	// mu       sync.Mutex
+	bag ValueBag
 }
 
 // NewExpiringCnclContext returns a new instance of the CnclContext.
-func NewExpiringCnclContext(action func(), timeout time.Duration) *ExpiringCnclContext {
-	exp := &ExpiringCnclContext{close: make(chan struct{}), action: action}
+func NewExpiringCnclContext(action func(), timeout time.Duration, bag ValueBag) *ExpiringCnclContext {
+	exp := &ExpiringCnclContext{close: make(chan struct{}), action: action, bag: bag}
 	go exp.monitor()
 	return exp
 }
@@ -103,11 +118,27 @@ func NewExpiringCnclContext(action func(), timeout time.Duration) *ExpiringCnclC
 // Cancel closes the internal channel of the contxt
 func (cn *ExpiringCnclContext) Cancel() {
 	cn.once.Do(func() {
+		// cn.mu.Lock()
+		// defer cn.mu.Unlock()
+
 		close(cn.close)
+		cn.bag = nil
 		if cn.action != nil {
 			cn.action()
 		}
 	})
+}
+
+// Bag returns an associated ValueBag for this instance.
+func (cn *ExpiringCnclContext) Bag() ValueBag {
+	// cn.mu.Lock()
+	// defer cn.mu.Unlock()
+
+	if cn.bag == nil {
+		cn.bag = NewValueBag()
+	}
+
+	return cn.bag
 }
 
 // Done returns a channel to signal ending of op.
@@ -121,10 +152,260 @@ func (cn *ExpiringCnclContext) monitor() {
 	cn.Cancel()
 }
 
+//================================================================================
+
+// context defines a struct for bundling a context against specific
+// use cases with a explicitly set duration which clears all its internal
+// data after the giving period.
+type context struct {
+	fields *Pair
+}
+
+// ValueBagFromAny adds giving key-value pairs into the bag.
+func ValueBagFromAny(fields map[interface{}]interface{}) ValueBag {
+	initial := (*Pair)(nil)
+
+	for key, val := range fields {
+		initial = initial.Append(key, val)
+	}
+
+	return &context{fields: initial}
+}
+
+// ValueBagFrom adds giving key-value pairs into the bag.
+func ValueBagFrom(fields map[string]interface{}) ValueBag {
+	initial := (*Pair)(nil)
+
+	for key, val := range fields {
+		initial = initial.Append(key, val)
+	}
+
+	return &context{fields: initial}
+}
+
+// NewValueBag returns a new context object that meets the Context interface.
+func NewValueBag() ValueBag {
+	cl := context{
+		fields: (*Pair)(nil),
+	}
+
+	return &cl
+}
+
+// WithValue returns a new context based on the previos one.
+func (c *context) WithValue(key, value interface{}) ValueBag {
+	child := &context{
+		fields: Append(c.fields, key, value),
+	}
+
+	return child
+}
+
+// GetDuration returns the value for the necessary key within the context.
+func (c *context) GetDuration(key interface{}) (item time.Duration, found bool) {
+	item, found = c.fields.GetDuration(key)
+	return
+}
+
+// Get returns the value for the necessary key within the context.
+func (c *context) Get(key interface{}) (item interface{}, found bool) {
+	item, found = c.fields.Get(key)
+	return
+}
+
+// GetBool returns the value type value of a key if it exists.
+func (c *context) GetBool(key interface{}) (bool, bool) {
+	return c.fields.GetBool(key)
+}
+
+// GetFloat64 returns the value type value of a key if it exists.
+func (c *context) GetFloat64(key interface{}) (float64, bool) {
+	return c.fields.GetFloat64(key)
+}
+
+// GetFloat32 returns the value type value of a key if it exists.
+func (c *context) GetFloat32(key interface{}) (float32, bool) {
+	return c.fields.GetFloat32(key)
+}
+
+// GetInt8 returns the value type value of a key if it exists.
+func (c *context) GetInt8(key interface{}) (int8, bool) {
+	return c.fields.GetInt8(key)
+}
+
+// GetInt16 returns the value type value of a key if it exists.
+func (c *context) GetInt16(key interface{}) (int16, bool) {
+	return c.fields.GetInt16(key)
+}
+
+// GetInt64 returns the value type value of a key if it exists.
+func (c *context) GetInt64(key interface{}) (int64, bool) {
+	return c.fields.GetInt64(key)
+}
+
+// GetInt32 returns the value type value of a key if it exists.
+func (c *context) GetInt32(key interface{}) (int32, bool) {
+	return c.fields.GetInt32(key)
+}
+
+// GetInt returns the value type value of a key if it exists.
+func (c *context) GetInt(key interface{}) (int, bool) {
+	return c.fields.GetInt(key)
+}
+
+// GetString returns the value type value of a key if it exists.
+func (c *context) GetString(key interface{}) (string, bool) {
+	return c.fields.GetString(key)
+}
+
 //==============================================================================
 
-// nilPair defines a nil starting pair.
-var nilPair = (*Pair)(nil)
+// GoogleContext implements a decorator for googles context package.
+type GoogleContext struct {
+	gcontext.Context
+}
+
+// FromContext returns a new context object that meets the Context interface.
+func FromContext(ctx gcontext.Context) *GoogleContext {
+	var gc GoogleContext
+	gc.Context = ctx
+	return &gc
+}
+
+// GetDuration returns the giving value for the provided key if it exists else nil.
+func (g *GoogleContext) GetDuration(key interface{}) (time.Duration, bool) {
+	val := g.Context.Value(key)
+	if val == nil {
+		return 0, false
+	}
+
+	if dval, ok := val.(time.Duration); ok {
+		return dval, true
+	}
+
+	if dval, ok := val.(int64); ok {
+		return time.Duration(dval), true
+	}
+
+	if sval, ok := val.(string); ok {
+		if dur, err := time.ParseDuration(sval); err == nil {
+			return dur, true
+		}
+	}
+
+	return 0, false
+}
+
+// Get returns the giving value for the provided key if it exists else nil.
+func (g *GoogleContext) Get(key interface{}) (interface{}, bool) {
+	val := g.Context.Value(key)
+	if val == nil {
+		return val, false
+	}
+
+	return val, true
+}
+
+// GetBool returns the value type value of a key if it exists.
+func (g *GoogleContext) GetBool(key interface{}) (bool, bool) {
+	val, found := g.Get(key)
+	if !found {
+		return false, false
+	}
+
+	value, ok := val.(bool)
+	return value, ok
+}
+
+// GetFloat64 returns the value type value of a key if it exists.
+func (g *GoogleContext) GetFloat64(key interface{}) (float64, bool) {
+	val, found := g.Get(key)
+	if !found {
+		return 0, false
+	}
+
+	value, ok := val.(float64)
+	return value, ok
+}
+
+// GetFloat32 returns the value type value of a key if it exists.
+func (g *GoogleContext) GetFloat32(key interface{}) (float32, bool) {
+	val, found := g.Get(key)
+	if !found {
+		return 0, false
+	}
+
+	value, ok := val.(float32)
+	return value, ok
+}
+
+// GetInt8 returns the value type value of a key if it exists.
+func (g *GoogleContext) GetInt8(key interface{}) (int8, bool) {
+	val, found := g.Get(key)
+	if !found {
+		return 0, false
+	}
+
+	value, ok := val.(int8)
+	return value, ok
+}
+
+// GetInt16 returns the value type value of a key if it exists.
+func (g *GoogleContext) GetInt16(key interface{}) (int16, bool) {
+	val, found := g.Get(key)
+	if !found {
+		return 0, false
+	}
+
+	value, ok := val.(int16)
+	return value, ok
+}
+
+// GetInt64 returns the value type value of a key if it exists.
+func (g *GoogleContext) GetInt64(key interface{}) (int64, bool) {
+	val, found := g.Get(key)
+	if !found {
+		return 0, false
+	}
+
+	value, ok := val.(int64)
+	return value, ok
+}
+
+// GetInt32 returns the value type value of a key if it exists.
+func (g *GoogleContext) GetInt32(key interface{}) (int32, bool) {
+	val, found := g.Get(key)
+	if !found {
+		return 0, false
+	}
+
+	value, ok := val.(int32)
+	return value, ok
+}
+
+// GetInt returns the value type value of a key if it exists.
+func (g *GoogleContext) GetInt(key interface{}) (int, bool) {
+	val, found := g.Get(key)
+	if !found {
+		return 0, false
+	}
+
+	value, ok := val.(int)
+	return value, ok
+}
+
+// GetString returns the value type value of a key if it exists.
+func (g *GoogleContext) GetString(key interface{}) (string, bool) {
+	val, found := g.Get(key)
+	if !found {
+		return "", false
+	}
+
+	value, ok := val.(string)
+	return value, ok
+}
+
+//==============================================================================
 
 // Pair defines a struct for storing a linked pair of key and values.
 type Pair struct {
@@ -196,7 +477,31 @@ func (p *Pair) Root() *Pair {
 	return p.prev.Root()
 }
 
-// GetBool collects the string value of a key if it exists.
+// GetDuration returns the duration value of a key if it exists.
+func (p *Pair) GetDuration(key interface{}) (time.Duration, bool) {
+	val, found := p.Get(key)
+	if !found {
+		return 0, false
+	}
+
+	if dval, ok := val.(time.Duration); ok {
+		return dval, true
+	}
+
+	if dval, ok := val.(int64); ok {
+		return time.Duration(dval), true
+	}
+
+	if sval, ok := val.(string); ok {
+		if dur, err := time.ParseDuration(sval); err == nil {
+			return dur, true
+		}
+	}
+
+	return 0, false
+}
+
+// GetBool returns the bool value of a key if it exists.
 func (p *Pair) GetBool(key interface{}) (bool, bool) {
 	val, found := p.Get(key)
 	if !found {
@@ -207,7 +512,7 @@ func (p *Pair) GetBool(key interface{}) (bool, bool) {
 	return value, ok
 }
 
-// GetFloat64 collects the string value of a key if it exists.
+// GetFloat64 returns the float64 value of a key if it exists.
 func (p *Pair) GetFloat64(key interface{}) (float64, bool) {
 	val, found := p.Get(key)
 	if !found {
@@ -218,7 +523,7 @@ func (p *Pair) GetFloat64(key interface{}) (float64, bool) {
 	return value, ok
 }
 
-// GetFloat32 collects the string value of a key if it exists.
+// GetFloat32 returns the float32 value of a key if it exists.
 func (p *Pair) GetFloat32(key interface{}) (float32, bool) {
 	val, found := p.Get(key)
 	if !found {
@@ -229,7 +534,7 @@ func (p *Pair) GetFloat32(key interface{}) (float32, bool) {
 	return value, ok
 }
 
-// GetInt8 collects the string value of a key if it exists.
+// GetInt8 returns the int8 value of a key if it exists.
 func (p *Pair) GetInt8(key interface{}) (int8, bool) {
 	val, found := p.Get(key)
 	if !found {
@@ -240,7 +545,7 @@ func (p *Pair) GetInt8(key interface{}) (int8, bool) {
 	return value, ok
 }
 
-// GetInt16 collects the string value of a key if it exists.
+// GetInt16 returns the int16 value of a key if it exists.
 func (p *Pair) GetInt16(key interface{}) (int16, bool) {
 	val, found := p.Get(key)
 	if !found {
@@ -251,7 +556,7 @@ func (p *Pair) GetInt16(key interface{}) (int16, bool) {
 	return value, ok
 }
 
-// GetInt64 collects the string value of a key if it exists.
+// GetInt64 returns the value type value of a key if it exists.
 func (p *Pair) GetInt64(key interface{}) (int64, bool) {
 	val, found := p.Get(key)
 	if !found {
@@ -262,7 +567,7 @@ func (p *Pair) GetInt64(key interface{}) (int64, bool) {
 	return value, ok
 }
 
-// GetInt32 collects the string value of a key if it exists.
+// GetInt32 returns the value type value of a key if it exists.
 func (p *Pair) GetInt32(key interface{}) (int32, bool) {
 	val, found := p.Get(key)
 	if !found {
@@ -273,7 +578,7 @@ func (p *Pair) GetInt32(key interface{}) (int32, bool) {
 	return value, ok
 }
 
-// GetInt collects the string value of a key if it exists.
+// GetInt returns the value type value of a key if it exists.
 func (p *Pair) GetInt(key interface{}) (int, bool) {
 	val, found := p.Get(key)
 	if !found {
@@ -284,7 +589,7 @@ func (p *Pair) GetInt(key interface{}) (int, bool) {
 	return value, ok
 }
 
-// GetString collects the string value of a key if it exists.
+// GetString returns the value type value of a key if it exists.
 func (p *Pair) GetString(key interface{}) (string, bool) {
 	val, found := p.Get(key)
 	if !found {
@@ -295,7 +600,7 @@ func (p *Pair) GetString(key interface{}) (string, bool) {
 	return value, ok
 }
 
-// Get collects the value of a key if it exists.
+// Get returns the value of a key if it exists.
 func (p *Pair) Get(key interface{}) (value interface{}, found bool) {
 	if p == nil {
 		return
@@ -310,253 +615,4 @@ func (p *Pair) Get(key interface{}) (value interface{}, found bool) {
 	}
 
 	return p.prev.Get(key)
-}
-
-//==============================================================================
-
-// GoogleContext implements a decorator for googles context package.
-type GoogleContext struct {
-	gcontext.Context
-}
-
-// FromContext returns a new context object that meets the Context interface.
-func FromContext(ctx gcontext.Context) *GoogleContext {
-	var gc GoogleContext
-	gc.Context = ctx
-	return &gc
-}
-
-// Get returns the giving value for the provided key if it exists else nil.
-func (g *GoogleContext) Get(key interface{}) (interface{}, bool) {
-	val := g.Context.Value(key)
-	if val == nil {
-		return val, false
-	}
-
-	return val, true
-}
-
-// GetBool collects the string value of a key if it exists.
-func (g *GoogleContext) GetBool(key interface{}) (bool, bool) {
-	val, found := g.Get(key)
-	if !found {
-		return false, false
-	}
-
-	value, ok := val.(bool)
-	return value, ok
-}
-
-// GetFloat64 collects the string value of a key if it exists.
-func (g *GoogleContext) GetFloat64(key interface{}) (float64, bool) {
-	val, found := g.Get(key)
-	if !found {
-		return 0, false
-	}
-
-	value, ok := val.(float64)
-	return value, ok
-}
-
-// GetFloat32 collects the string value of a key if it exists.
-func (g *GoogleContext) GetFloat32(key interface{}) (float32, bool) {
-	val, found := g.Get(key)
-	if !found {
-		return 0, false
-	}
-
-	value, ok := val.(float32)
-	return value, ok
-}
-
-// GetInt8 collects the string value of a key if it exists.
-func (g *GoogleContext) GetInt8(key interface{}) (int8, bool) {
-	val, found := g.Get(key)
-	if !found {
-		return 0, false
-	}
-
-	value, ok := val.(int8)
-	return value, ok
-}
-
-// GetInt16 collects the string value of a key if it exists.
-func (g *GoogleContext) GetInt16(key interface{}) (int16, bool) {
-	val, found := g.Get(key)
-	if !found {
-		return 0, false
-	}
-
-	value, ok := val.(int16)
-	return value, ok
-}
-
-// GetInt64 collects the string value of a key if it exists.
-func (g *GoogleContext) GetInt64(key interface{}) (int64, bool) {
-	val, found := g.Get(key)
-	if !found {
-		return 0, false
-	}
-
-	value, ok := val.(int64)
-	return value, ok
-}
-
-// GetInt32 collects the string value of a key if it exists.
-func (g *GoogleContext) GetInt32(key interface{}) (int32, bool) {
-	val, found := g.Get(key)
-	if !found {
-		return 0, false
-	}
-
-	value, ok := val.(int32)
-	return value, ok
-}
-
-// GetInt collects the string value of a key if it exists.
-func (g *GoogleContext) GetInt(key interface{}) (int, bool) {
-	val, found := g.Get(key)
-	if !found {
-		return 0, false
-	}
-
-	value, ok := val.(int)
-	return value, ok
-}
-
-// GetString collects the string value of a key if it exists.
-func (g *GoogleContext) GetString(key interface{}) (string, bool) {
-	val, found := g.Get(key)
-	if !found {
-		return "", false
-	}
-
-	value, ok := val.(string)
-	return value, ok
-}
-
-//================================================================================
-
-// context defines a struct for bundling a context against specific
-// use cases with a explicitly set duration which clears all its internal
-// data after the giving period.
-type context struct {
-	mx     sync.Mutex
-	fields *Pair
-}
-
-// ExpiringValueBag returns a ValueBagContext which contexts will be deleted once
-// the provided duration has finished it's
-func ExpiringValueBag(dur time.Duration) ValueBagContext {
-	bag := &context{
-		fields: nilPair,
-	}
-
-	NewExpiringCnclContext(func() {
-		bag.mx.Lock()
-		defer bag.mx.Unlock()
-		bag.fields = nilPair
-	}, dur)
-
-	return bag
-}
-
-// ValueBag returns a new context object that meets the Context interface.
-func ValueBag() ValueBagContext {
-	cl := context{
-		fields: nilPair,
-	}
-
-	return &cl
-}
-
-// WithValue returns a new context based on the previos one.
-func (c *context) WithValue(key, value interface{}) ValueBagContext {
-	c.mx.Lock()
-	fields := Append(c.fields, key, value)
-	c.mx.Unlock()
-
-	child := &context{
-		fields: fields,
-	}
-
-	return child
-}
-
-// Set adds the giving value using the given key into the map.
-func (c *context) Set(key, val interface{}) {
-	c.mx.Lock()
-	defer c.mx.Unlock()
-	c.fields = Append(c.fields, key, val)
-}
-
-// Get returns the value for the necessary key within the context.
-func (c *context) Get(key interface{}) (item interface{}, found bool) {
-	c.mx.Lock()
-	defer c.mx.Unlock()
-	item, found = c.fields.Get(key)
-	return
-}
-
-// GetBool collects the string value of a key if it exists.
-func (c *context) GetBool(key interface{}) (bool, bool) {
-	c.mx.Lock()
-	defer c.mx.Unlock()
-	return c.fields.GetBool(key)
-}
-
-// GetFloat64 collects the string value of a key if it exists.
-func (c *context) GetFloat64(key interface{}) (float64, bool) {
-	c.mx.Lock()
-	defer c.mx.Unlock()
-	return c.fields.GetFloat64(key)
-}
-
-// GetFloat32 collects the string value of a key if it exists.
-func (c *context) GetFloat32(key interface{}) (float32, bool) {
-	c.mx.Lock()
-	defer c.mx.Unlock()
-	return c.fields.GetFloat32(key)
-}
-
-// GetInt8 collects the string value of a key if it exists.
-func (c *context) GetInt8(key interface{}) (int8, bool) {
-	c.mx.Lock()
-	defer c.mx.Unlock()
-	return c.fields.GetInt8(key)
-}
-
-// GetInt16 collects the string value of a key if it exists.
-func (c *context) GetInt16(key interface{}) (int16, bool) {
-	c.mx.Lock()
-	defer c.mx.Unlock()
-	return c.fields.GetInt16(key)
-}
-
-// GetInt64 collects the string value of a key if it exists.
-func (c *context) GetInt64(key interface{}) (int64, bool) {
-	c.mx.Lock()
-	defer c.mx.Unlock()
-	return c.fields.GetInt64(key)
-}
-
-// GetInt32 collects the string value of a key if it exists.
-func (c *context) GetInt32(key interface{}) (int32, bool) {
-	c.mx.Lock()
-	defer c.mx.Unlock()
-	return c.fields.GetInt32(key)
-}
-
-// GetInt collects the string value of a key if it exists.
-func (c *context) GetInt(key interface{}) (int, bool) {
-	c.mx.Lock()
-	defer c.mx.Unlock()
-	return c.fields.GetInt(key)
-}
-
-// GetString collects the string value of a key if it exists.
-func (c *context) GetString(key interface{}) (string, bool) {
-	c.mx.Lock()
-	defer c.mx.Unlock()
-	return c.fields.GetString(key)
 }
