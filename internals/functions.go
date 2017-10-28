@@ -286,7 +286,7 @@ func (f Flag) FromList(args []string) (string, bool) {
 		}
 
 		name := vals[0]
-		if arg != name {
+		if f.Name != name {
 			continue
 		}
 
