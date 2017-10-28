@@ -435,10 +435,14 @@ func getArgumentsState(arg ast.ArgType, arg2 *ast.ArgType) (internals.ArgType, i
 					}
 				} else {
 					parts := strings.Split(name, ".")
-					if unicode.IsLower(rune(parts[1][0])) {
-						params.Exported = internals.UnExportedImport
+					if len(parts) > 1 {
+						if unicode.IsLower(rune(parts[1][0])) {
+							params.Exported = internals.UnExportedImport
+						} else {
+							params.Exported = internals.ExportedImport
+						}
 					} else {
-						params.Exported = internals.ExportedImport
+						params.Exported = internals.UnExportedImport
 					}
 				}
 			}
