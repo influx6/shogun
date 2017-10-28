@@ -60,6 +60,16 @@ func MainShogunMeta(cmd string, args []string) (internals.ShogunFunc, error) {
           Function: {{.RealName}},
           Name: {{quote .RealName}},
           Source: `{{.Source}}`,
+          Flags: internals.Flags{
+            {{range .Flags}}
+              {
+                EnvVar: {{quote .EnvVar}},
+                Name: {{quote .Name}},
+                Desc: {{quote .Desc}},
+                Type: internals.FlagType({{.Type.Int}}),
+              },
+            {{end}}
+          },
         }, nil
     {{end}}
     {{end}}
@@ -70,7 +80,7 @@ func MainShogunMeta(cmd string, args []string) (internals.ShogunFunc, error) {
 
 // MainShogunExecute executes necessary commands as needed from its arguments and
 // writes corresponding outputs to provided `ougoing` writeCloser.
-func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing io.WriteCloser, ctxTimeout time.Duration) error {
+func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Reader, outgoing io.WriteCloser, ctxTimeout time.Duration) error {
   {{ if notequal (len .Subs) 0}}// If its a subcommand then let subcommand handle this.
   if subCommands[cmd] {
     var first string
@@ -84,13 +94,36 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
     switch cmd {
     {{ range $_, $sub := .Subs}}
       case {{quote $sub.BinaryName}}:
-        return {{$sub.CleanBinaryName}}.MainShogunExecute(first, rest, incoming, outgoing, ctxTimeout)
+        return {{$sub.CleanBinaryName}}.MainShogunExecute(first, rest, flags, incoming, outgoing, ctxTimeout)
     {{end}}
     }
   }
-  {{end}}switch cmd {
+  {{end}}
+
+
+  switch cmd {
     {{ range $_, $elem := .Main.Functions }}{{range $elem.List}}
       case {{quote .Name}}, {{quote .RealName}}:
+
+      {{if not (usesNoContext .Context) }}
+        cmdFlags := internals.Flags{
+          {{range .Flags}}
+            {
+              EnvVar: {{quote .EnvVar}},
+              Name: {{quote .Name}},
+              Desc: {{quote .Desc}},
+              Type: internals.FlagType({{.Type.Int}}),
+            },
+          {{end}}
+        }
+
+        // If flags failed to load then cryout.
+        flagVals, err := cmdFlags.Load(flags)
+        if err != nil {
+          return err
+        }
+      {{end}}
+
         {{if hasNoArgument .Type }}
             {{if usesNoContext .Context }}
               {{if returnsError .Return }}
@@ -110,6 +143,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -121,13 +158,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -151,6 +188,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -162,13 +203,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -206,6 +247,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -217,13 +262,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -255,6 +300,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -266,13 +315,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -310,6 +359,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -321,13 +374,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -359,6 +412,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -370,13 +427,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -407,6 +464,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
               }else{
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
 
               if canceller != nil {
                 defer canceller()
@@ -419,13 +480,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -466,6 +527,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
               }else{
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
 
               if canceller != nil {
                 defer canceller()
@@ -478,13 +543,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -526,6 +591,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -537,13 +606,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -581,6 +650,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -592,13 +665,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -629,6 +702,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
               }else{
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
 
               if canceller != nil {
                 defer canceller()
@@ -641,13 +718,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -679,6 +756,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -690,13 +771,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -738,6 +819,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -749,13 +834,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -793,6 +878,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -804,13 +893,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -852,6 +941,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -863,13 +956,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -889,6 +982,25 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
         return ErrNoDefault
       {{else}}
       {{range .Main.Default}}
+      {{if not (usesNoContext .Context) }}
+        cmdFlags := internals.Flags{
+          {{range .Flags}}
+            {
+              EnvVar: {{quote .EnvVar}},
+              Name: {{quote .Name}},
+              Desc: {{quote .Desc}},
+              Type: internals.FlagType({{.Type.Int}}),
+            },
+          {{end}}
+        }
+
+        // If flags failed to load then cryout.
+        flagVals, err := cmdFlags.Load(flags)
+        if err != nil {
+          return err
+        }
+      {{end}}
+
         {{if hasNoArgument .Type }}
             {{if usesNoContext .Context }}
               {{if returnsError .Return }}
@@ -908,6 +1020,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -919,13 +1035,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -949,6 +1065,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -960,13 +1080,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1004,6 +1124,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -1015,13 +1139,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1053,6 +1177,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -1064,13 +1192,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1108,6 +1236,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -1119,13 +1251,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1157,6 +1289,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -1168,13 +1304,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1205,6 +1341,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
               }else{
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
 
               if canceller != nil {
                 defer canceller()
@@ -1217,13 +1357,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1264,6 +1404,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
               }else{
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
 
               if canceller != nil {
                 defer canceller()
@@ -1276,13 +1420,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1324,6 +1468,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -1335,13 +1483,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1379,6 +1527,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -1390,13 +1542,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1427,6 +1579,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
               }else{
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
 
               if canceller != nil {
                 defer canceller()
@@ -1439,13 +1595,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1477,6 +1633,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -1488,13 +1648,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1536,6 +1696,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -1547,13 +1711,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1591,6 +1755,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -1602,13 +1770,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()
@@ -1650,6 +1818,10 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
               }
 
+              for key, val := range flagVals {
+                ctx = gctx.WithValue(ctx, key, val)
+              }
+
               if canceller != nil {
                 defer canceller()
               }
@@ -1661,13 +1833,13 @@ func MainShogunExecute(cmd string, args []string, incoming io.Reader, outgoing i
                 return nil
               {{end}}
             {{end}}
-            {{if usesFauxContext .Context}}
+            {{if usesFauxContext .Context}}bag := context.ValueBagFrom(flagVals)
               var ctx context.CancelableContext
 
               if ctxTimeout == 0 {
-                ctx = context.NewCnclContext()
+                ctx = context.NewCnclContext(bag)
               }else{
-                ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+                ctx = context.NewExpiringCnclContext(nil, ctxTimeout, bag)
               }
 
               defer ctx.Cancel()

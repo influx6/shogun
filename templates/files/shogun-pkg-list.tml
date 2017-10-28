@@ -10,5 +10,5 @@ KATANA COMMANDS:
 OTHER SAMURAI COMMANDS:
 
 {{ range $name, $elem := .Subs}}
-⡿ {{ $elem.Name }}              {{$elem.Desc}}
+⡿ {{ $elem.Name }}           {{$elem.Desc}}
 {{ end }}

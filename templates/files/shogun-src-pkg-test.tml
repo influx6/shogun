@@ -35,6 +35,16 @@ func Test{{capitalize .Name}}(t *testing.T){
     Function: pkg.{{.RealName}},
     Name: {{quote .RealName}},
     Source: `{{.Source}}`,
+    Flags: internals.Flags{
+      {{range .Flags}}
+        {
+          EnvVar: {{quote .EnvVar}},
+          Name: {{quote .Name}},
+          Desc: {{quote .Desc}},
+          Type: internals.FlagType({{.Type.Int}}),
+        },
+      {{end}}
+    },
   })
 }
 {{end}}
@@ -48,6 +58,16 @@ func Test{{capitalize .Name}}(t *testing.T){
     Function: pkg.{{.RealName}},
     Name: {{quote .RealName}},
     Source: `{{.Source}}`,
+    Flags: internals.Flags{
+      {{range .Flags}}
+        {
+          EnvVar: {{quote .EnvVar}},
+          Name: {{quote .Name}},
+          Desc: {{quote .Desc}},
+          Type: internals.FlagType({{.Type.Int}}),
+        },
+      {{end}}
+    },
   })
 }
 {{end}}
@@ -61,6 +81,16 @@ func Test{{capitalize .Name}}(t *testing.T){
     Function: pkg.{{.RealName}},
     Name: {{quote .RealName}},
     Source: `{{.Source}}`,
+    Flags: internals.Flags{
+      {{range .Flags}}
+        {
+          EnvVar: {{quote .EnvVar}},
+          Name: {{quote .Name}},
+          Desc: {{quote .Desc}},
+          Type: internals.FlagType({{.Type.Int}}),
+        },
+      {{end}}
+    },
   })
 }
 {{end}}
@@ -74,6 +104,16 @@ func Test{{capitalize .Name}}(t *testing.T){
     Function: pkg.{{.RealName}},
     Name: {{quote .RealName}},
     Source: `{{.Source}}`,
+    Flags: internals.Flags{
+      {{range .Flags}}
+        {
+          EnvVar: {{quote .EnvVar}},
+          Name: {{quote .Name}},
+          Desc: {{quote .Desc}},
+          Type: internals.FlagType({{.Type.Int}}),
+        },
+      {{end}}
+    },
   })
 }
 {{end}}
@@ -87,6 +127,16 @@ func Test{{capitalize .Name}}(t *testing.T){
     Function: pkg.{{.RealName}},
     Name: {{quote .RealName}},
     Source: `{{.Source}}`,
+    Flags: internals.Flags{
+      {{range .Flags}}
+        {
+          EnvVar: {{quote .EnvVar}},
+          Name: {{quote .Name}},
+          Desc: {{quote .Desc}},
+          Type: internals.FlagType({{.Type.Int}}),
+        },
+      {{end}}
+    },
   })
 }
 {{end}}
@@ -100,6 +150,16 @@ func Test{{capitalize .Name}}(t *testing.T){
     Function: pkg.{{.RealName}},
     Name: {{quote .RealName}},
     Source: `{{.Source}}`,
+    Flags: internals.Flags{
+      {{range .Flags}}
+        {
+          EnvVar: {{quote .EnvVar}},
+          Name: {{quote .Name}},
+          Desc: {{quote .Desc}},
+          Type: internals.FlagType({{.Type.Int}}),
+        },
+      {{end}}
+    },
   })
 }
 {{end}}
@@ -113,6 +173,16 @@ func Test{{capitalize .Name}}(t *testing.T){
     Function: pkg.{{.RealName}},
     Name: {{quote .RealName}},
     Source: `{{.Source}}`,
+    Flags: internals.Flags{
+      {{range .Flags}}
+        {
+          EnvVar: {{quote .EnvVar}},
+          Name: {{quote .Name}},
+          Desc: {{quote .Desc}},
+          Type: internals.FlagType({{.Type.Int}}),
+        },
+      {{end}}
+    },
   })
 }
 {{end}}
@@ -126,6 +196,16 @@ func Test{{capitalize .Name}}(t *testing.T){
     Function: pkg.{{.RealName}},
     Name: {{quote .RealName}},
     Source: `{{.Source}}`,
+    Flags: internals.Flags{
+      {{range .Flags}}
+        {
+          EnvVar: {{quote .EnvVar}},
+          Name: {{quote .Name}},
+          Desc: {{quote .Desc}},
+          Type: internals.FlagType({{.Type.Int}}),
+        },
+      {{end}}
+    },
   })
 }
 {{end}}
@@ -139,6 +219,16 @@ func Test{{capitalize .Name}}(t *testing.T){
     Function: pkg.{{.RealName}},
     Name: {{quote .RealName}},
     Source: `{{.Source}}`,
+    Flags: internals.Flags{
+      {{range .Flags}}
+        {
+          EnvVar: {{quote .EnvVar}},
+          Name: {{quote .Name}},
+          Desc: {{quote .Desc}},
+          Type: internals.FlagType({{.Type.Int}}),
+        },
+      {{end}}
+    },
   })
 }
 {{end}}
@@ -152,6 +242,16 @@ func Test{{capitalize .Name}}(t *testing.T){
     Function: pkg.{{.RealName}},
     Name: {{quote .RealName}},
     Source: `{{.Source}}`,
+    Flags: internals.Flags{
+      {{range .Flags}}
+        {
+          EnvVar: {{quote .EnvVar}},
+          Name: {{quote .Name}},
+          Desc: {{quote .Desc}},
+          Type: internals.FlagType({{.Type.Int}}),
+        },
+      {{end}}
+    },
   })
 }
 
@@ -528,9 +628,9 @@ func execWithContext(fun interface{}, ctxTimeout time.Duration) error {
 		var ctx context.CancelableContext
 
 		if ctxTimeout == 0 {
-			ctx = context.NewCnclContext()
+			ctx = context.NewCnclContext(nil)
 		} else {
-			ctx = context.NewExpiringCnclContext(nil, ctxTimeout)
+			ctx = context.NewExpiringCnclContext(nil, ctxTimeout, nil)
 		}
 
 		defer ctx.Cancel()
