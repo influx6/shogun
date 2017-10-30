@@ -36,10 +36,12 @@ func TestWriterFunction(fun internals.ShogunFunc) {
 	realFunc := fun.Function.(func(io.WriteCloser))
 	realGCtxFunc := fun.Function.(func(gctx.Context, io.WriteCloser))
 	realFCtxFunc := fun.Function.(func(context.CancelContext, io.WriteCloser))
+	realCnFCtxFunc := fun.Function.(func(context.CancelableContext, io.WriteCloser))
 
 	realFuncWithReturn := fun.Function.(func(io.WriteCloser) error)
 	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, io.WriteCloser) error)
 	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, io.WriteCloser) error)
+	realCnFCtxFuncWithReturn := fun.Function.(func(context.CancelableContext, io.WriteCloser) error)
 
 	switch fun.Context {
 	case internals.NoContext:
@@ -63,13 +65,23 @@ func TestWriterFunction(fun internals.ShogunFunc) {
 			return nil
 		}, 0)
 	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.CancelContext) error {
+		err = execWithContext(func(ctx context.CancelableContext) error {
 			if fun.Return == internals.NoReturn {
-				realFCtxFunc(ctx, wopCloser{Writer: &outgoing})
-			}
+				if realCnFCtxFunc != nil {
+					realCnFCtxFunc(ctx, wopCloser{Writer: &outgoing})
+				}
 
+				if realFCtxFunc != nil {
+					realFCtxFunc(ctx, wopCloser{Writer: &outgoing})
+				}
+			}
 			if fun.Return == internals.ErrorReturn {
-				err = realFCtxFuncWithReturn(ctx, wopCloser{Writer: &outgoing})
+				if realFCtxFuncWithReturn != nil {
+					err = realFCtxFuncWithReturn(ctx, wopCloser{Writer: &outgoing})
+				}
+				if realCnFCtxFuncWithReturn != nil {
+					err = realCnFCtxFuncWithReturn(ctx, wopCloser{Writer: &outgoing})
+				}
 			}
 
 			return nil
@@ -105,10 +117,12 @@ func TestReaderFunction(fun internals.ShogunFunc) {
 	realFunc := fun.Function.(func(io.Reader))
 	realGCtxFunc := fun.Function.(func(gctx.Context, io.Reader))
 	realFCtxFunc := fun.Function.(func(context.CancelContext, io.Reader))
+	realCnFCtxFunc := fun.Function.(func(context.CancelableContext, io.Reader))
 
 	realFuncWithReturn := fun.Function.(func(io.Reader) error)
 	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, io.Reader) error)
 	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, io.Reader) error)
+	realCnFCtxFuncWithReturn := fun.Function.(func(context.CancelableContext, io.Reader) error)
 
 	switch fun.Context {
 	case internals.NoContext:
@@ -132,13 +146,22 @@ func TestReaderFunction(fun internals.ShogunFunc) {
 			return nil
 		}, 0)
 	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.CancelContext) error {
+		err = execWithContext(func(ctx context.CancelableContext) error {
 			if fun.Return == internals.NoReturn {
-				realFCtxFunc(ctx, &incoming)
+				if realCnFCtxFunc != nil {
+					realCnFCtxFunc(ctx, &incoming)
+				}
+				if realFCtxFunc != nil {
+					realFCtxFunc(ctx, &incoming)
+				}
 			}
-
 			if fun.Return == internals.ErrorReturn {
-				err = realFCtxFuncWithReturn(ctx, &incoming)
+				if realFCtxFuncWithReturn != nil {
+					err = realFCtxFuncWithReturn(ctx, &incoming)
+				}
+				if realCnFCtxFuncWithReturn != nil {
+					err = realCnFCtxFuncWithReturn(ctx, &incoming)
+				}
 			}
 
 			return nil
@@ -175,10 +198,12 @@ func TestReaderWithWriterFunction(fun internals.ShogunFunc) {
 	realFunc := fun.Function.(func(io.Reader, io.WriteCloser))
 	realGCtxFunc := fun.Function.(func(gctx.Context, io.Reader, io.WriteCloser))
 	realFCtxFunc := fun.Function.(func(context.CancelContext, io.Reader, io.WriteCloser))
+	realCnFCtxFunc := fun.Function.(func(context.CancelableContext, io.Reader, io.WriteCloser))
 
 	realFuncWithReturn := fun.Function.(func(io.Reader, io.WriteCloser) error)
 	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, io.Reader, io.WriteCloser) error)
 	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, io.Reader, io.WriteCloser) error)
+	realCnFCtxFuncWithReturn := fun.Function.(func(context.CancelableContext, io.Reader, io.WriteCloser) error)
 
 	switch fun.Context {
 	case internals.NoContext:
@@ -202,13 +227,22 @@ func TestReaderWithWriterFunction(fun internals.ShogunFunc) {
 			return nil
 		}, 0)
 	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.CancelContext) error {
+		err = execWithContext(func(ctx context.CancelableContext) error {
 			if fun.Return == internals.NoReturn {
-				realFCtxFunc(ctx, &incoming, wopCloser{Writer: &outgoing})
+				if realCnFCtxFunc != nil {
+					realCnFCtxFunc(ctx, &incoming, wopCloser{Writer: &outgoing})
+				}
+				if realFCtxFunc != nil {
+					realFCtxFunc(ctx, &incoming, wopCloser{Writer: &outgoing})
+				}
 			}
-
 			if fun.Return == internals.ErrorReturn {
-				err = realFCtxFuncWithReturn(ctx, &incoming, wopCloser{Writer: &outgoing})
+				if realFCtxFuncWithReturn != nil {
+					err = realFCtxFuncWithReturn(ctx, &incoming, wopCloser{Writer: &outgoing})
+				}
+				if realCnFCtxFuncWithReturn != nil {
+					err = realCnFCtxFuncWithReturn(ctx, &incoming, wopCloser{Writer: &outgoing})
+				}
 			}
 
 			return nil
@@ -249,10 +283,12 @@ func TestMapFunction(fun internals.ShogunFunc) {
 	realFunc := fun.Function.(func(map[string]interface{}))
 	realGCtxFunc := fun.Function.(func(gctx.Context, map[string]interface{}))
 	realFCtxFunc := fun.Function.(func(context.CancelContext, map[string]interface{}))
+	realCnFCtxFunc := fun.Function.(func(context.CancelableContext, map[string]interface{}))
 
 	realFuncWithReturn := fun.Function.(func(map[string]interface{}) error)
 	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, map[string]interface{}) error)
 	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, map[string]interface{}) error)
+	realCnFCtxFuncWithReturn := fun.Function.(func(context.CancelableContext, map[string]interface{}) error)
 
 	data := make(map[string]interface{})
 	if jserr := json.NewDecoder(&incoming).Decode(&data); jserr != nil {
@@ -282,13 +318,22 @@ func TestMapFunction(fun internals.ShogunFunc) {
 			return nil
 		}, 0)
 	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.CancelContext) error {
+		err = execWithContext(func(ctx context.CancelableContext) error {
 			if fun.Return == internals.NoReturn {
-				realFCtxFunc(ctx, data)
+				if realCnFCtxFunc != nil {
+					realCnFCtxFunc(ctx, data)
+				}
+				if realFCtxFunc != nil {
+					realFCtxFunc(ctx, data)
+				}
 			}
-
 			if fun.Return == internals.ErrorReturn {
-				err = realFCtxFuncWithReturn(ctx, data)
+				if realFCtxFuncWithReturn != nil {
+					err = realFCtxFuncWithReturn(ctx, data)
+				}
+				if realCnFCtxFuncWithReturn != nil {
+					err = realCnFCtxFuncWithReturn(ctx, data)
+				}
 			}
 
 			return nil
@@ -325,10 +370,12 @@ func TestMapWithWriterFunction(fun internals.ShogunFunc) {
 	realFunc := fun.Function.(func(map[string]interface{}, io.WriteCloser))
 	realGCtxFunc := fun.Function.(func(gctx.Context, map[string]interface{}, io.WriteCloser))
 	realFCtxFunc := fun.Function.(func(context.CancelContext, map[string]interface{}, io.WriteCloser))
+	realCnFCtxFunc := fun.Function.(func(context.CancelableContext, map[string]interface{}, io.WriteCloser))
 
 	realFuncWithReturn := fun.Function.(func(map[string]interface{}, io.WriteCloser) error)
 	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, map[string]interface{}, io.WriteCloser) error)
 	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, map[string]interface{}, io.WriteCloser) error)
+	realCnFCtxFuncWithReturn := fun.Function.(func(context.CancelableContext, map[string]interface{}, io.WriteCloser) error)
 
 	data := make(map[string]interface{})
 	if jserr := json.NewDecoder(&incoming).Decode(&data); jserr != nil {
@@ -358,13 +405,22 @@ func TestMapWithWriterFunction(fun internals.ShogunFunc) {
 			return nil
 		}, 0)
 	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.CancelContext) error {
+		err = execWithContext(func(ctx context.CancelableContext) error {
 			if fun.Return == internals.NoReturn {
-				realFCtxFunc(ctx, data, wopCloser{Writer: &outgoing})
+				if realCnFCtxFunc != nil {
+					realCnFCtxFunc(ctx, data, wopCloser{Writer: &outgoing})
+				}
+				if realFCtxFunc != nil {
+					realFCtxFunc(ctx, data, wopCloser{Writer: &outgoing})
+				}
 			}
-
 			if fun.Return == internals.ErrorReturn {
-				err = realFCtxFuncWithReturn(ctx, data, wopCloser{Writer: &outgoing})
+				if realFCtxFuncWithReturn != nil {
+					err = realFCtxFuncWithReturn(ctx, data, wopCloser{Writer: &outgoing})
+				}
+				if realCnFCtxFuncWithReturn != nil {
+					err = realCnFCtxFuncWithReturn(ctx, data, wopCloser{Writer: &outgoing})
+				}
 			}
 
 			return nil
@@ -402,10 +458,12 @@ func TestNoArgumentFunction(fun internals.ShogunFunc) {
 	realFunc := fun.Function.(func())
 	realGCtxFunc := fun.Function.(func(gctx.Context))
 	realFCtxFunc := fun.Function.(func(context.CancelContext))
+	realCnFCtxFunc := fun.Function.(func(context.CancelableContext))
 
 	realFuncWithReturn := fun.Function.(func() error)
 	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context) error)
-	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext) error)
+	realFCtxFuncWithReturn := fun.Function.(func(context.CancelableContext) error)
+	realCnFCtxFuncWithReturn := fun.Function.(func(context.CancelableContext) error)
 
 	switch fun.Context {
 	case internals.NoContext:
@@ -429,13 +487,22 @@ func TestNoArgumentFunction(fun internals.ShogunFunc) {
 			return nil
 		}, 0)
 	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.CancelContext) error {
+		err = execWithContext(func(ctx context.CancelableContext) error {
 			if fun.Return == internals.NoReturn {
-				realFCtxFunc(ctx)
+				if realCnFCtxFunc != nil {
+					realCnFCtxFunc(ctx)
+				}
+				if realFCtxFunc != nil {
+					realFCtxFunc(ctx)
+				}
 			}
-
 			if fun.Return == internals.ErrorReturn {
-				err = realFCtxFuncWithReturn(ctx)
+				if realFCtxFuncWithReturn != nil {
+					err = realFCtxFuncWithReturn(ctx)
+				}
+				if realCnFCtxFuncWithReturn != nil {
+					err = realCnFCtxFuncWithReturn(ctx)
+				}
 			}
 
 			return nil
@@ -472,10 +539,12 @@ func TestStringFunction(fun internals.ShogunFunc) {
 	realFunc := fun.Function.(func(string))
 	realGCtxFunc := fun.Function.(func(gctx.Context, string))
 	realFCtxFunc := fun.Function.(func(context.CancelContext, string))
+	realCnFCtxFunc := fun.Function.(func(context.CancelableContext, string))
 
 	realFuncWithReturn := fun.Function.(func(string) error)
 	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, string) error)
-	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, string) error)
+	realFCtxFuncWithReturn := fun.Function.(func(context.CancelableContext, string) error)
+	realCnFCtxFuncWithReturn := fun.Function.(func(context.CancelableContext, string) error)
 
 	switch fun.Context {
 	case internals.NoContext:
@@ -499,13 +568,22 @@ func TestStringFunction(fun internals.ShogunFunc) {
 			return nil
 		}, 0)
 	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.CancelContext) error {
+		err = execWithContext(func(ctx context.CancelableContext) error {
 			if fun.Return == internals.NoReturn {
-				realFCtxFunc(ctx, incoming.String())
+				if realCnFCtxFunc != nil {
+					realCnFCtxFunc(ctx, incoming.String())
+				}
+				if realFCtxFunc != nil {
+					realFCtxFunc(ctx, incoming.String())
+				}
 			}
-
 			if fun.Return == internals.ErrorReturn {
-				err = realFCtxFuncWithReturn(ctx, incoming.String())
+				if realFCtxFuncWithReturn != nil {
+					err = realFCtxFuncWithReturn(ctx, incoming.String())
+				}
+				if realCnFCtxFuncWithReturn != nil {
+					err = realCnFCtxFuncWithReturn(ctx, incoming.String())
+				}
 			}
 
 			return nil
@@ -542,10 +620,12 @@ func TestStringWithWriterFunction(fun internals.ShogunFunc) {
 	realFunc := fun.Function.(func(string, io.WriteCloser))
 	realGCtxFunc := fun.Function.(func(gctx.Context, string, io.WriteCloser))
 	realFCtxFunc := fun.Function.(func(context.CancelContext, string, io.WriteCloser))
+	realCnFCtxFunc := fun.Function.(func(context.CancelableContext, string, io.WriteCloser))
 
 	realFuncWithReturn := fun.Function.(func(string, io.WriteCloser) error)
 	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, string, io.WriteCloser) error)
-	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, string, io.WriteCloser) error)
+	realFCtxFuncWithReturn := fun.Function.(func(context.CancelableContext, string, io.WriteCloser) error)
+	realCnFCtxFuncWithReturn := fun.Function.(func(context.CancelableContext, string, io.WriteCloser) error)
 
 	switch fun.Context {
 	case internals.NoContext:
@@ -569,13 +649,22 @@ func TestStringWithWriterFunction(fun internals.ShogunFunc) {
 			return nil
 		}, 0)
 	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.CancelContext) error {
+		err = execWithContext(func(ctx context.CancelableContext) error {
 			if fun.Return == internals.NoReturn {
-				realFCtxFunc(ctx, incoming.String(), wopCloser{Writer: &outgoing})
+				if realCnFCtxFunc != nil {
+					realCnFCtxFunc(ctx, incoming.String(), wopCloser{Writer: &outgoing})
+				}
+				if realFCtxFunc != nil {
+					realFCtxFunc(ctx, incoming.String(), wopCloser{Writer: &outgoing})
+				}
 			}
-
 			if fun.Return == internals.ErrorReturn {
-				err = realFCtxFuncWithReturn(ctx, incoming.String(), wopCloser{Writer: &outgoing})
+				if realFCtxFuncWithReturn != nil {
+					err = realFCtxFuncWithReturn(ctx, incoming.String(), wopCloser{Writer: &outgoing})
+				}
+				if realCnFCtxFuncWithReturn != nil {
+					err = realCnFCtxFuncWithReturn(ctx, incoming.String(), wopCloser{Writer: &outgoing})
+				}
 			}
 
 			return nil
@@ -597,6 +686,30 @@ func TestStringWithWriterFunction(fun internals.ShogunFunc) {
 
 func execWithContext(fun interface{}, ctxTimeout time.Duration) error {
 	switch dfunc := fun.(type) {
+	case func(context.Context) error:
+		var ctx context.CancelableContext
+
+		if ctxTimeout == 0 {
+			ctx = context.NewCnclContext(nil)
+		} else {
+			ctx = context.NewExpiringCnclContext(nil, ctxTimeout, nil)
+		}
+
+		defer ctx.Cancel()
+
+		return dfunc(ctx)
+	case func(context.CancelableContext) error:
+		var ctx context.CancelableContext
+
+		if ctxTimeout == 0 {
+			ctx = context.NewCnclContext(nil)
+		} else {
+			ctx = context.NewExpiringCnclContext(nil, ctxTimeout, nil)
+		}
+
+		defer ctx.Cancel()
+
+		return dfunc(ctx)
 	case func(context.CancelContext) error:
 		var ctx context.CancelableContext
 
