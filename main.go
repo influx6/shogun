@@ -290,11 +290,11 @@ func helpAction(c *cli.Context) error {
 	exitCode, err := binCmd.ExecWithExitCode(context.Background(), events)
 	if err != nil {
 		events.Emit(metrics.Error(err))
-		return fmt.Errorf("Command Error: %+q", err)
+		return fmt.Errorf("command error: %+q", err)
 	}
 
 	if exitCode > 0 {
-		return fmt.Errorf("Command Error: ExitCode: %d\n", exitCode)
+		return fmt.Errorf("command error (exitCode: %d)", exitCode)
 	}
 
 	return nil
@@ -419,12 +419,12 @@ func buildAction(c *cli.Context) error {
 	binaryPath := binPath()
 	currentDir, err := os.Getwd()
 	if err != nil {
-		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
+		events.Emit(metrics.Error(err), metrics.With("dir", currentDir), metrics.With("binary_path", binaryPath))
 		return err
 	}
 
 	if igerr := checkAndAddIgnore(currentDir); igerr != nil {
-		events.Emit(metrics.Errorf("Failed to add changes to .gitignore: %+q", igerr).With("dir", currentDir))
+		events.Emit(metrics.Errorf("Failed to add changes to .gitignore: %+q", igerr), metrics.With("dir", currentDir))
 		return igerr
 	}
 
@@ -441,7 +441,7 @@ func buildAction(c *cli.Context) error {
 	// Build hash list for directories.
 	hashList, err := samurai.ListPackageHash(events, events, targetDir, ctx)
 	if err != nil {
-		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
+		events.Emit(metrics.Error(err), metrics.With("dir", currentDir), metrics.With("binary_path", binaryPath))
 		if err == samurai.ErrSkipDir {
 			return nil
 		}
@@ -452,7 +452,7 @@ func buildAction(c *cli.Context) error {
 	// Build directories for commands.
 	directive, err := samurai.BuildPackage(events, events, targetDir, cmdDir, currentDir, binaryPath, skipBuild, c.Bool("remove"), c.Bool("singlepkg"), c.Bool("skipsub"), ctx)
 	if err != nil {
-		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
+		events.Emit(metrics.Error(err), metrics.With("dir", currentDir), metrics.With("binary_path", binaryPath))
 		return err
 	}
 
@@ -476,7 +476,7 @@ func buildAction(c *cli.Context) error {
 
 		subUpdated = true
 		if err := ast.SimpleWriteDirectives("./", true, sub.List...); err != nil {
-			events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
+			events.Emit(metrics.Error(err), metrics.With("dir", currentDir), metrics.With("binary_path", binaryPath))
 			return err
 		}
 	}
@@ -491,7 +491,7 @@ func buildAction(c *cli.Context) error {
 	}
 
 	if err := ast.SimpleWriteDirectives("./", true, directive.Main.List...); err != nil {
-		events.Emit(metrics.Error(err).With("dir", currentDir).With("binary_path", binaryPath))
+		events.Emit(metrics.Error(err), metrics.With("dir", currentDir), metrics.With("binary_path", binaryPath))
 		return err
 	}
 
