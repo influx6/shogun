@@ -30,13 +30,32 @@ type Getter interface {
 type ValueBag interface {
 	Getter
 
+	// Set adds a key-value pair into the bag.
+	Set(key, value interface{})
+
 	// WithValue returns a new context then adds the key and value pair into the
 	// context's store.
 	WithValue(key interface{}, value interface{}) ValueBag
 }
 
+// IsExpired returns true/false whether the provided CancelContext has expired.
+func IsExpired(c CancelContext) bool {
+	select {
+	case <-c.Done():
+		return true
+	case <-time.After(5 * time.Millisecond):
+		return false
+	}
+}
+
+// Deadline exposes a single method to return expected deadline for context.
+type Deadline interface {
+	Deadline() (time.Time, bool)
+}
+
 // CancelContext defines a type which provides Done signal for cancelling operations.
 type CancelContext interface {
+	Deadline
 	Done() <-chan struct{}
 }
 
@@ -71,6 +90,16 @@ func MakeGoogleContextFrom(ctx CancelContext) gcontext.Context {
 	return cmx
 }
 
+// New returns a new instance of a CancelableContext with ValueBag set.
+func New() CancelableContext {
+	return &CnclContext{close: make(chan struct{}), bag: NewValueBag()}
+}
+
+// WithTimeout returns a new Context made from provided duration.
+func WithTimeout(bag ValueBag, d time.Duration) Context {
+	return NewExpiringCnclContext(nil, d, bag)
+}
+
 // NewCnclContext returns a new instance of the CnclContext.
 func NewCnclContext(bag ValueBag) *CnclContext {
 	return &CnclContext{close: make(chan struct{}), bag: bag}
@@ -92,6 +121,11 @@ func (cn *CnclContext) Cancel() {
 	})
 }
 
+// Deadline returns giving time when context is expected to be canceled.
+func (cn *CnclContext) Deadline() (time.Time, bool) {
+	return time.Time{}, false
+}
+
 // Done returns a channel to signal ending of op.
 // It implements the CancelContext.
 func (cn *CnclContext) Done() <-chan struct{} {
@@ -104,15 +138,20 @@ type ExpiringCnclContext struct {
 	action   func()
 	once     sync.Once
 	duration time.Duration
-	// mu       sync.Mutex
-	bag ValueBag
+	deadline time.Time
+	bag      ValueBag
 }
 
 // NewExpiringCnclContext returns a new instance of the CnclContext.
 func NewExpiringCnclContext(action func(), timeout time.Duration, bag ValueBag) *ExpiringCnclContext {
-	exp := &ExpiringCnclContext{close: make(chan struct{}), action: action, bag: bag}
+	exp := &ExpiringCnclContext{close: make(chan struct{}), action: action, bag: bag, duration: timeout, deadline: time.Now().Add(timeout)}
 	go exp.monitor()
 	return exp
+}
+
+// Deadline returns giving time when context is expected to be canceled.
+func (cn *ExpiringCnclContext) Deadline() (time.Time, bool) {
+	return cn.deadline, true
 }
 
 // Cancel closes the internal channel of the contxt
@@ -158,6 +197,7 @@ func (cn *ExpiringCnclContext) monitor() {
 // use cases with a explicitly set duration which clears all its internal
 // data after the giving period.
 type context struct {
+	ml     sync.Mutex
 	fields *Pair
 }
 
@@ -192,8 +232,17 @@ func NewValueBag() ValueBag {
 	return &cl
 }
 
+// Set adds given value into context.
+func (c *context) Set(key, value interface{}) {
+	c.ml.Lock()
+	defer c.ml.Unlock()
+	c.fields = Append(c.fields, key, value)
+}
+
 // WithValue returns a new context based on the previos one.
 func (c *context) WithValue(key, value interface{}) ValueBag {
+	c.ml.Lock()
+	defer c.ml.Unlock()
 	child := &context{
 		fields: Append(c.fields, key, value),
 	}
@@ -203,12 +252,16 @@ func (c *context) WithValue(key, value interface{}) ValueBag {
 
 // GetDuration returns the value for the necessary key within the context.
 func (c *context) GetDuration(key interface{}) (item time.Duration, found bool) {
+	c.ml.Lock()
+	defer c.ml.Unlock()
 	item, found = c.fields.GetDuration(key)
 	return
 }
 
 // Get returns the value for the necessary key within the context.
 func (c *context) Get(key interface{}) (item interface{}, found bool) {
+	c.ml.Lock()
+	defer c.ml.Unlock()
 	item, found = c.fields.Get(key)
 	return
 }
@@ -256,6 +309,11 @@ func (c *context) GetInt(key interface{}) (int, bool) {
 // GetString returns the value type value of a key if it exists.
 func (c *context) GetString(key interface{}) (string, bool) {
 	return c.fields.GetString(key)
+}
+
+// Deadline returns giving time when context is expected to be canceled.
+func (c *context) Deadline() (time.Time, bool) {
+	return time.Time{}, false
 }
 
 //==============================================================================

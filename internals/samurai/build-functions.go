@@ -62,7 +62,7 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdD
 				return nil
 			}
 
-			events.Emit(metrics.Error(err2).With("dir", abs).With("binary_path", binaryPath))
+			events.Emit(metrics.Error(err2), metrics.With("dir", abs), metrics.With("binary_path", binaryPath))
 			return err2
 		}
 
@@ -70,7 +70,7 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdD
 		list.Subs[res.Path] = res
 		return nil
 	}); err != nil {
-		events.Emit(metrics.Error(err).With("dir", dir))
+		events.Emit(metrics.Error(err), metrics.With("dir", dir))
 		return list, err
 	}
 
@@ -83,7 +83,7 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdD
 	var err error
 	list.Main, err = BuildPackageForDir(vlog, events, dir, cmdDir, cuDir, binaryPath, skipBuild, removeFiles, combined, ctx)
 	if err != nil {
-		events.Emit(metrics.Error(err).With("dir", dir).With("binary_path", binaryPath))
+		events.Emit(metrics.Error(err), metrics.With("dir", dir), metrics.With("binary_path", binaryPath))
 		return list, err
 	}
 

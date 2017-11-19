@@ -1,6 +1,9 @@
 package gen
 
 import (
+	"crypto/md5"
+	"crypto/sha1"
+	"encoding/base64"
 	"fmt"
 	"path"
 	"strconv"
@@ -156,6 +159,19 @@ var (
 		},
 		"percentage": func(a, b float64) float64 {
 			return (a / b) * 100
+		},
+		"base64": func(data string) string {
+			return base64.StdEncoding.EncodeToString([]byte(data))
+		},
+		"sha1": func(data string) string {
+			mo := sha1.New()
+			mo.Write([]byte(data))
+			return fmt.Sprintf("%x", mo.Sum(nil))
+		},
+		"md5": func(data string) string {
+			mo := md5.New()
+			mo.Write([]byte(data))
+			return fmt.Sprintf("%x", mo.Sum(nil))
 		},
 		"lenOf":         lenOff,
 		"nthOf":         nthOf,

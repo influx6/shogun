@@ -30,9 +30,24 @@ func Passed(message string, val ...interface{}) {
 const failedMark = "\u2717"
 
 // Failed logs the failure message using the giving message and values.
+// Failed calls os.Exit(1) after printing.
 func Failed(message string, val ...interface{}) {
 	if testing.Verbose() {
 		logger.Output(2, fmt.Sprintf("\t%s\t %s\n", failedMark, fmt.Sprintf(message, val...)))
+	}
+
+	os.Exit(1)
+}
+
+// FailedWithError logs the failure message using the giving message and values.
+// It also shows the error under the comment.
+// FailedWithError calls os.Exit(1) after printing.
+func FailedWithError(err error, message string, val ...interface{}) {
+	if testing.Verbose() {
+		logger.Output(2, fmt.Sprintf("\t%s\t %s\n", failedMark, fmt.Sprintf(message, val...)))
+		if err != nil {
+			logger.Output(2, fmt.Sprintf("\t%s\t Error: %+q\n", "-", err))
+		}
 	}
 
 	os.Exit(1)
@@ -42,5 +57,16 @@ func Failed(message string, val ...interface{}) {
 func Errored(message string, val ...interface{}) {
 	if testing.Verbose() {
 		logger.Output(2, fmt.Sprintf("\t%s\t %s\n", failedMark, fmt.Sprintf(message, val...)))
+	}
+}
+
+// ErroredWithError logs the failure message using the giving message and values.
+// It also shows the error under the comment.
+func ErroredWithError(err error, message string, val ...interface{}) {
+	if testing.Verbose() {
+		logger.Output(2, fmt.Sprintf("\t%s\t %s\n", failedMark, fmt.Sprintf(message, val...)))
+		if err != nil {
+			logger.Output(2, fmt.Sprintf("\t%s\t Error: %+q\n", "-", err))
+		}
 	}
 }

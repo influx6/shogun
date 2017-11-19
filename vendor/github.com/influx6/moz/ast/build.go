@@ -60,11 +60,11 @@ func ParseAnnotations(log metrics.Metrics, dir string) (Packages, error) {
 func FilteredPackageWithBuildCtx(log metrics.Metrics, dir string, ctx build.Context) (Packages, error) {
 	rootbuildPkg, err := ctx.ImportDir(dir, 0)
 	if err != nil {
-		log.Emit(metrics.Errorf("Failed to retrieve build.Package for root directory").
-			With("file", dir).
-			With("dir", dir).
-			With("error", err.Error()).
-			With("mode", build.FindOnly))
+		log.Emit(metrics.Errorf("Failed to retrieve build.Package for root directory"),
+			metrics.With("file", dir),
+			metrics.With("dir", dir),
+			metrics.With("error", err.Error()),
+			metrics.With("mode", build.FindOnly))
 		return nil, err
 	}
 
@@ -72,11 +72,11 @@ func FilteredPackageWithBuildCtx(log metrics.Metrics, dir string, ctx build.Cont
 		return nil, &build.NoGoError{}
 	}
 
-	log.Emit(metrics.Info("Generated build.Package").
-		With("file", dir).
-		With("dir", dir).
-		With("pkg", rootbuildPkg).
-		With("mode", build.FindOnly))
+	log.Emit(metrics.Info("Generated build.Package"),
+		metrics.With("file", dir),
+		metrics.With("dir", dir),
+		metrics.With("pkg", rootbuildPkg),
+		metrics.With("mode", build.FindOnly))
 
 	allowed := make(map[string]bool)
 	for _, file := range rootbuildPkg.GoFiles {
@@ -84,14 +84,14 @@ func FilteredPackageWithBuildCtx(log metrics.Metrics, dir string, ctx build.Cont
 	}
 
 	filter := func(f os.FileInfo) bool {
-		log.Emit(metrics.Info("Parse Filtering file").With("incoming-file", f.Name()).With("allowed", allowed[f.Name()]))
+		log.Emit(metrics.Info("Parse Filtering file"), metrics.With("incoming-file", f.Name()), metrics.With("allowed", allowed[f.Name()]))
 		return allowed[f.Name()]
 	}
 
 	tokenFiles := token.NewFileSet()
 	packages, err := parser.ParseDir(tokenFiles, dir, filter, parser.ParseComments)
 	if err != nil {
-		log.Emit(metrics.Error(err).With("message", "Failed to parse dir").With("dir", dir))
+		log.Emit(metrics.Error(err), metrics.With("message", "Failed to parse dir"), metrics.With("dir", dir))
 		return nil, err
 	}
 
@@ -108,36 +108,36 @@ func FilteredPackageWithBuildCtx(log metrics.Metrics, dir string, ctx build.Cont
 			if !ok {
 				buildPkg, err = ctx.ImportDir(pathPkg, 0)
 				if err != nil {
-					log.Emit(metrics.Errorf("Failed to retrieve build.Package").
-						With("file", path).
-						With("dir", dir).
-						With("file-dir", filepath.Dir(path)).
-						With("error", err.Error()).
-						With("mode", build.FindOnly))
+					log.Emit(metrics.Errorf("Failed to retrieve build.Package"),
+						metrics.With("file", path),
+						metrics.With("dir", dir),
+						metrics.With("file-dir", filepath.Dir(path)),
+						metrics.With("error", err.Error()),
+						metrics.With("mode", build.FindOnly))
 				} else {
 					packageBuilds[pathPkg] = buildPkg
 
-					log.Emit(metrics.Info("Generated build.Package").
-						With("file", path).
-						With("pkg", buildPkg).
-						With("file-dir", filepath.Dir(path)).
-						With("dir", dir).
-						With("mode", build.FindOnly))
+					log.Emit(metrics.Info("Generated build.Package"),
+						metrics.With("file", path),
+						metrics.With("pkg", buildPkg),
+						metrics.With("file-dir", filepath.Dir(path)),
+						metrics.With("dir", dir),
+						metrics.With("mode", build.FindOnly))
 				}
 			}
 
 			res, err := parseFileToPackage(log, dir, path, pkg.Name, tokenFiles, file, pkg)
 			if err != nil {
-				log.Emit(metrics.Error(err).With("message", "Failed to parse file").With("dir", dir).With("file", file.Name.Name).With("Package", pkg.Name))
+				log.Emit(metrics.Error(err), metrics.With("message", "Failed to parse file"), metrics.With("dir", dir), metrics.With("file", file.Name.Name), metrics.With("Package", pkg.Name))
 				return nil, err
 			}
 
 			if err := res.loadImported(log); err != nil {
-				log.Emit(metrics.Error(err).With("message", "Failed to load imported pacakges").With("dir", dir).With("file", file.Name.Name).With("Package", pkg.Name))
+				log.Emit(metrics.Error(err), metrics.With("message", "Failed to load imported pacakges"), metrics.With("dir", dir), metrics.With("file", file.Name.Name), metrics.With("Package", pkg.Name))
 				return nil, err
 			}
 
-			log.Emit(metrics.Info("Parsed Package File").With("dir", dir).With("file", file.Name.Name).With("path", path).With("Package", pkg.Name))
+			log.Emit(metrics.Info("Parsed Package File"), metrics.With("dir", dir), metrics.With("file", file.Name.Name), metrics.With("path", path), metrics.With("Package", pkg.Name))
 
 			if owner, ok := packageDeclrs[pkg.Name]; ok {
 				if strings.HasSuffix(tag, "_test") {
@@ -193,7 +193,7 @@ func PackageWithBuildCtx(log metrics.Metrics, dir string, ctx build.Context) ([]
 	tokenFiles := token.NewFileSet()
 	packages, err := parser.ParseDir(tokenFiles, dir, nil, parser.ParseComments)
 	if err != nil {
-		log.Emit(metrics.Error(err).With("message", "Failed to parse directory").With("dir", dir))
+		log.Emit(metrics.Error(err), metrics.With("message", "Failed to parse directory"), metrics.With("dir", dir))
 		return nil, err
 	}
 
@@ -206,7 +206,7 @@ func PackageWithBuildCtx(log metrics.Metrics, dir string, ctx build.Context) ([]
 		processedPackages.pl.Lock()
 		res, ok := processedPackages.pkgs[uniqueDir]
 		if ok {
-			log.Emit(metrics.Info("Skipping package processing").With("dir", dir))
+			log.Emit(metrics.Info("Skipping package processing"), metrics.With("dir", dir))
 			processedPackages.pl.Unlock()
 			packageDeclrs[pkg.Name] = res
 			continue
@@ -223,26 +223,26 @@ func PackageWithBuildCtx(log metrics.Metrics, dir string, ctx build.Context) ([]
 			if !ok {
 				buildPkg, err = ctx.ImportDir(pathPkg, 0)
 				if err != nil {
-					log.Emit(metrics.Errorf("Failed to retrieve build.Package").
-						With("file", path).
-						With("dir", dir).
-						With("file-dir", filepath.Dir(path)).
-						With("error", err.Error()).
-						With("mode", build.FindOnly))
+					log.Emit(metrics.Errorf("Failed to retrieve build.Package"),
+						metrics.With("file", path),
+						metrics.With("dir", dir),
+						metrics.With("file-dir", filepath.Dir(path)),
+						metrics.With("error", err.Error()),
+						metrics.With("mode", build.FindOnly))
 				} else {
 					packageBuilds[pathPkg] = buildPkg
-					log.Emit(metrics.Info("Generated build.Package").
-						With("file", path).
-						With("pkg", buildPkg).
-						With("file-dir", filepath.Dir(path)).
-						With("dir", dir).
-						With("mode", build.FindOnly))
+					log.Emit(metrics.Info("Generated build.Package"),
+						metrics.With("file", path),
+						metrics.With("pkg", buildPkg),
+						metrics.With("file-dir", filepath.Dir(path)),
+						metrics.With("dir", dir),
+						metrics.With("mode", build.FindOnly))
 				}
 			}
 
 			res, err := parseFileToPackage(log, dir, path, pkg.Name, tokenFiles, file, pkg)
 			if err != nil {
-				log.Emit(metrics.Error(err).With("message", "Failed to parse file").With("dir", dir).With("file", file.Name.Name).With("Package", pkg.Name))
+				log.Emit(metrics.Error(err), metrics.With("message", "Failed to parse file"), metrics.With("dir", dir), metrics.With("file", file.Name.Name), metrics.With("Package", pkg.Name))
 				return nil, err
 			}
 
@@ -291,7 +291,7 @@ func PackageWithBuildCtx(log metrics.Metrics, dir string, ctx build.Context) ([]
 	var pkgs []Package
 	for _, pkg := range packageDeclrs {
 		if err := pkg.loadImported(log); err != nil {
-			log.Emit(metrics.Error(err).With("message", "Failed to load imported pacakges").With("pkg", pkg.Path))
+			log.Emit(metrics.Error(err), metrics.With("message", "Failed to load imported pacakges"), metrics.With("pkg", pkg.Path))
 			return nil, err
 		}
 
@@ -308,32 +308,32 @@ func PackageFileWithBuildCtx(log metrics.Metrics, path string, ctx build.Context
 
 	buildPkg, err := ctx.ImportDir(dir, 0)
 	if err != nil {
-		log.Emit(metrics.Errorf("Failed to retrieve build.Package").
-			With("file", path).
-			With("dir", dir).
-			With("error", err.Error()).
-			With("mode", build.FindOnly))
+		log.Emit(metrics.Errorf("Failed to retrieve build.Package"),
+			metrics.With("file", path),
+			metrics.With("dir", dir),
+			metrics.With("error", err.Error()),
+			metrics.With("mode", build.FindOnly))
 	}
 
-	log.Emit(metrics.Info("Generated build.Package").
-		With("file", path).
-		With("dir", dir).
-		With("pkg", buildPkg).
-		With("mode", build.FindOnly))
+	log.Emit(metrics.Info("Generated build.Package"),
+		metrics.With("file", path),
+		metrics.With("dir", dir),
+		metrics.With("pkg", buildPkg),
+		metrics.With("mode", build.FindOnly))
 
 	allowed := map[string]bool{
 		fName: true,
 	}
 
 	filter := func(f os.FileInfo) bool {
-		log.Emit(metrics.Info("Parse Filtering file").With("incoming-file", f.Name()).With("allowed", allowed[f.Name()]))
+		log.Emit(metrics.Info("Parse Filtering file"), metrics.With("incoming-file", f.Name()), metrics.With("allowed", allowed[f.Name()]))
 		return allowed[f.Name()]
 	}
 
 	tokenFiles := token.NewFileSet()
 	packages, err := parser.ParseDir(tokenFiles, path, filter, parser.ParseComments)
 	if err != nil {
-		log.Emit(metrics.Error(err).With("message", "Failed to parse file").With("dir", dir).With("file", path))
+		log.Emit(metrics.Error(err), metrics.With("message", "Failed to parse file"), metrics.With("dir", dir), metrics.With("file", path))
 		return Package{}, err
 	}
 
@@ -359,12 +359,12 @@ func PackageFileWithBuildCtx(log metrics.Metrics, path string, ctx build.Context
 
 		res, err := parseFileToPackage(log, dir, path, buildPkg.Name, tokenFiles, file, pkg)
 		if err != nil {
-			log.Emit(metrics.Error(err).With("message", "Failed to parse file").With("dir", dir).With("file", file.Name.Name).With("Package", pkg.Name))
+			log.Emit(metrics.Error(err), metrics.With("message", "Failed to parse file"), metrics.With("dir", dir), metrics.With("file", file.Name.Name), metrics.With("Package", pkg.Name))
 			return Package{}, err
 		}
 
 		if err := res.loadImported(log); err != nil {
-			log.Emit(metrics.Error(err).With("message", "Failed to load imported pacakges").With("dir", dir).With("file", file.Name.Name).With("Package", pkg.Name))
+			log.Emit(metrics.Error(err), metrics.With("message", "Failed to load imported pacakges"), metrics.With("dir", dir), metrics.With("file", file.Name.Name), metrics.With("Package", pkg.Name))
 			return Package{}, err
 		}
 
@@ -468,10 +468,10 @@ func parseFileToPackage(log metrics.Metrics, dir string, path string, pkgName st
 		if file.Doc != nil {
 			annotationRead := ReadAnnotationsFromCommentry(bytes.NewBufferString(file.Doc.Text()))
 
-			log.Emit(metrics.Info("Annotations in Package comments").
-				With("dir", dir).
-				With("annotations", len(annotationRead)).
-				With("file", file.Name.Name))
+			log.Emit(metrics.Info("Annotations in Package comments"),
+				metrics.With("dir", dir),
+				metrics.With("annotations", len(annotationRead)),
+				metrics.With("file", file.Name.Name))
 
 			packageDeclr.Annotations = append(packageDeclr.Annotations, annotationRead...)
 		}
@@ -505,15 +505,11 @@ func parseFileToPackage(log metrics.Metrics, dir string, path string, pkgName st
 					annotationRead := ReadAnnotationsFromCommentry(bytes.NewBufferString(rdeclr.Doc.Text()))
 
 					for _, item := range annotationRead {
-						log.Emit(metrics.Info("Annotation in Function Decleration comment").
-							With("dir", dir).
-							With("annotation", item.Name))
+						log.Emit(metrics.Info("Annotation in Function Decleration comment"), metrics.With("dir", dir), metrics.With("annotation", item.Name))
 
 						switch item.Name {
 						case "associates":
-							log.Emit(metrics.Error(errors.New("Association Annotation in Decleration is incomplete: Expects 3 elements")).
-								With("dir", dir).
-								With("association", item.Arguments))
+							log.Emit(metrics.Error(errors.New("Association Annotation in Decleration is incomplete: Expects 3 elements")), metrics.With("dir", dir), metrics.With("association", item.Arguments))
 
 							if len(item.Arguments) >= 3 {
 								associations[item.Arguments[0]] = AnnotationAssociationDeclaration{
@@ -539,6 +535,7 @@ func parseFileToPackage(log metrics.Metrics, dir string, path string, pkgName st
 				defFunc.Position = rdeclr.Pos()
 				defFunc.Path = packageDeclr.Path
 				defFunc.File = packageDeclr.File
+				defFunc.Declr = &packageDeclr
 				defFunc.FuncName = rdeclr.Name.Name
 				defFunc.Length = positionLength
 				defFunc.From = beginPosition.Offset
@@ -592,16 +589,16 @@ func parseFileToPackage(log metrics.Metrics, dir string, path string, pkgName st
 					annotationRead := ReadAnnotationsFromCommentry(bytes.NewBufferString(rdeclr.Doc.Text()))
 
 					for _, item := range annotationRead {
-						log.Emit(metrics.Info("Annotation in Decleration comment").
-							With("dir", dir).
-							With("annotation", item.Name))
+						log.Emit(metrics.Info("Annotation in Decleration comment"),
+							metrics.With("dir", dir),
+							metrics.With("annotation", item.Name))
 
 						switch item.Name {
 						case "associates":
-							log.Emit(metrics.Error(errors.New("Association Annotation in Decleration is incomplete: Expects 3 elements")).
-								With("dir", dir).
-								With("association", item.Arguments).
-								With("token", rdeclr.Tok.String()))
+							log.Emit(metrics.Error(errors.New("Association Annotation in Decleration is incomplete: Expects 3 elements")),
+								metrics.With("dir", dir),
+								metrics.With("association", item.Arguments),
+								metrics.With("token", rdeclr.Tok.String()))
 
 							if len(item.Arguments) >= 3 {
 								associations[item.Arguments[0]] = AnnotationAssociationDeclaration{
@@ -631,10 +628,10 @@ func parseFileToPackage(log metrics.Metrics, dir string, path string, pkgName st
 						switch robj := obj.Type.(type) {
 						case *ast.StructType:
 
-							log.Emit(metrics.Info("Annotation in Decleration").
-								With("Type", "Struct").
-								With("Annotations", len(annotations)).
-								With("StructName", obj.Name.Name))
+							log.Emit(metrics.Info("Annotation in Decleration"),
+								metrics.With("Type", "Struct"),
+								metrics.With("Annotations", len(annotations)),
+								metrics.With("StructName", obj.Name.Name))
 
 							packageDeclr.Structs = append(packageDeclr.Structs, StructDeclaration{
 								Object:       obj,
@@ -643,6 +640,7 @@ func parseFileToPackage(log metrics.Metrics, dir string, path string, pkgName st
 								Associations: associations,
 								Source:       string(source),
 								Comments:     comment,
+								Declr:        &packageDeclr,
 								File:         packageDeclr.File,
 								Package:      packageDeclr.Package,
 								Path:         packageDeclr.Path,
@@ -653,10 +651,10 @@ func parseFileToPackage(log metrics.Metrics, dir string, path string, pkgName st
 							break
 
 						case *ast.InterfaceType:
-							log.Emit(metrics.Info("Annotation in Decleration").
-								With("Type", "Interface").
-								With("Annotations", len(annotations)).
-								With("StructName", obj.Name.Name))
+							log.Emit(metrics.Info("Annotation in Decleration"),
+								metrics.With("Type", "Interface"),
+								metrics.With("Annotations", len(annotations)),
+								metrics.With("StructName", obj.Name.Name))
 
 							packageDeclr.Interfaces = append(packageDeclr.Interfaces, InterfaceDeclaration{
 								Object:       obj,
@@ -664,6 +662,7 @@ func parseFileToPackage(log metrics.Metrics, dir string, path string, pkgName st
 								Comments:     comment,
 								Annotations:  annotations,
 								Associations: associations,
+								Declr:        &packageDeclr,
 								Source:       string(source),
 								File:         packageDeclr.File,
 								Package:      packageDeclr.Package,
@@ -675,17 +674,18 @@ func parseFileToPackage(log metrics.Metrics, dir string, path string, pkgName st
 							break
 
 						default:
-							log.Emit(metrics.Info("Annotation in Decleration").
-								With("Type", "OtherType").
-								With("Marker", "NonStruct/NonInterface:Type").
-								With("Annotations", len(annotations)).
-								With("StructName", obj.Name.Name))
+							log.Emit(metrics.Info("Annotation in Decleration"),
+								metrics.With("Type", "OtherType"),
+								metrics.With("Marker", "NonStruct/NonInterface:Type"),
+								metrics.With("Annotations", len(annotations)),
+								metrics.With("StructName", obj.Name.Name))
 
 							packageDeclr.Types = append(packageDeclr.Types, TypeDeclaration{
 								Object:       obj,
 								Annotations:  annotations,
 								Comments:     comment,
 								Associations: associations,
+								Declr:        &packageDeclr,
 								Source:       string(source),
 								File:         packageDeclr.File,
 								Package:      packageDeclr.Package,
@@ -777,14 +777,16 @@ func SimpleWriteDirective(toDir string, doFileOverwrite bool, item gen.WriteDire
 		baseDir = filepath.Base(baseDir)
 	}
 
-	if _, err := os.Stat(namedFileDir); err != nil {
-		err = os.MkdirAll(namedFileDir, 0700)
-		if err != nil && err != os.ErrExist {
-			err = fmt.Errorf("IOError: Unable to create directory: %+q", err)
-			return err
-		}
+	if namedFileDir != "" {
+		if _, err := os.Stat(namedFileDir); err != nil {
+			err = os.MkdirAll(namedFileDir, 0700)
+			if err != nil && err != os.ErrExist {
+				err = fmt.Errorf("IOError: Unable to create directory: %+q", err)
+				return err
+			}
 
-		fmt.Printf("Creating directory %q\n", filepath.Join(baseDir, item.Dir))
+			fmt.Printf("Creating directory %q\n", filepath.Join(baseDir, item.Dir))
+		}
 	}
 
 	if item.Writer == nil {
@@ -833,9 +835,9 @@ func WriteDirective(log metrics.Metrics, toDir string, doFileOverwrite bool, ite
 		}
 	}
 
-	log.Emit(metrics.Info("Execute WriteDirective").
-		With("overwrite", item.DontOverride).
-		With("action", actions.MkDirectory{
+	log.Emit(metrics.Info("Execute WriteDirective"),
+		metrics.With("overwrite", item.DontOverride),
+		metrics.With("action", actions.MkDirectory{
 			Dir:     item.Dir,
 			RootDir: toDir,
 			Mode:    0700,
@@ -843,7 +845,7 @@ func WriteDirective(log metrics.Metrics, toDir string, doFileOverwrite bool, ite
 
 	if filepath.IsAbs(item.Dir) {
 		err := fmt.Errorf("gen.WriteDirectiveError: Expected relative Dir path not absolute: %+q", item.Dir)
-		log.Emit(metrics.Error(err).With("File", item.FileName).With("Overwrite", item.DontOverride).With("Dir", item.Dir))
+		log.Emit(metrics.Error(err), metrics.With("File", item.FileName), metrics.With("Overwrite", item.DontOverride), metrics.With("Dir", item.Dir))
 		return err
 	}
 
@@ -852,24 +854,26 @@ func WriteDirective(log metrics.Metrics, toDir string, doFileOverwrite bool, ite
 		namedFileDir = filepath.Join(toDir, item.Dir)
 	}
 
-	if err := os.MkdirAll(namedFileDir, 0700); err != nil && err != os.ErrExist {
-		err = fmt.Errorf("IOError: Unable to create directory: %+q", err)
-		log.Emit(metrics.Error(err).
-			With("overwrite", item.DontOverride).
-			With("action", events.DirCreated{
-				Error: err,
-				Action: actions.MkDirectory{
-					Dir:     item.Dir,
-					RootDir: toDir,
-					Mode:    0700,
-				},
-			}))
-		return err
+	if namedFileDir != "" {
+		if err := os.MkdirAll(namedFileDir, 0700); err != nil && err != os.ErrExist {
+			err = fmt.Errorf("IOError: Unable to create directory: %+q", err)
+			log.Emit(metrics.Error(err),
+				metrics.With("overwrite", item.DontOverride),
+				metrics.With("action", events.DirCreated{
+					Error: err,
+					Action: actions.MkDirectory{
+						Dir:     item.Dir,
+						RootDir: toDir,
+						Mode:    0700,
+					},
+				}))
+			return err
+		}
 	}
 
-	log.Emit(metrics.Info("Resolved WriteDirective").
-		With("op", "mkdir").
-		With("action", events.DirCreated{
+	log.Emit(metrics.Info("Resolved WriteDirective"),
+		metrics.With("op", "mkdir"),
+		metrics.With("action", events.DirCreated{
 			Action: actions.MkDirectory{
 				Dir:     item.Dir,
 				RootDir: toDir,
@@ -878,13 +882,13 @@ func WriteDirective(log metrics.Metrics, toDir string, doFileOverwrite bool, ite
 		}))
 
 	if item.Writer == nil {
-		log.Emit(metrics.Info("Resolved WriteDirective").With("File", item.FileName).With("Overwrite", item.DontOverride).With("Dir", item.Dir))
+		log.Emit(metrics.Info("Resolved WriteDirective"), metrics.With("File", item.FileName), metrics.With("Overwrite", item.DontOverride), metrics.With("Dir", item.Dir))
 		return nil
 	}
 
 	if item.FileName == "" {
 		err := fmt.Errorf("WriteDirective has no filename value attached")
-		log.Emit(metrics.Error(err).With("File", item.FileName).With("Overwrite", item.DontOverride).With("Dir", item.Dir))
+		log.Emit(metrics.Error(err), metrics.With("File", item.FileName), metrics.With("Overwrite", item.DontOverride), metrics.With("Dir", item.Dir))
 		return err
 	}
 
@@ -892,17 +896,19 @@ func WriteDirective(log metrics.Metrics, toDir string, doFileOverwrite bool, ite
 
 	fileStat, err := os.Stat(namedFile)
 	if err == nil && !fileStat.IsDir() && item.DontOverride && !doFileOverwrite {
-		log.Emit(metrics.Error(err).With("File", item.FileName).With("Overwrite", item.DontOverride).With("Dir", item.Dir).
-			With("DestinationDir", namedFileDir).
-			With("DestinationFile", namedFile))
+		log.Emit(metrics.Info("File overwrite not aloud"), metrics.With("File", item.FileName),
+			metrics.With("Overwrite", item.DontOverride),
+			metrics.With("Dir", item.Dir),
+			metrics.With("DestinationDir", namedFileDir),
+			metrics.With("DestinationFile", namedFile))
 		return err
 	}
 
 	newFile, err := os.Create(namedFile)
 	if err != nil {
-		log.Emit(metrics.Error(err).With("File", item.FileName).With("Overwrite", item.DontOverride).With("Dir", item.Dir).
-			With("DestinationDir", namedFileDir).
-			With("DestinationFile", namedFile))
+		log.Emit(metrics.Error(err), metrics.With("File", item.FileName), metrics.With("Overwrite", item.DontOverride), metrics.With("Dir", item.Dir),
+			metrics.With("DestinationDir", namedFileDir),
+			metrics.With("DestinationFile", namedFile))
 		return err
 	}
 
@@ -911,15 +917,15 @@ func WriteDirective(log metrics.Metrics, toDir string, doFileOverwrite bool, ite
 	written, err := item.Writer.WriteTo(newFile)
 	if err != nil && err != io.EOF {
 		err = fmt.Errorf("IOError: Unable to write content to file: %+q", err)
-		log.Emit(metrics.Error(err).With("File", item.FileName).With("Overwrite", item.DontOverride).With("Dir", item.Dir).
-			With("DestinationDir", namedFileDir).
-			With("DestinationFile", namedFile))
+		log.Emit(metrics.Error(err), metrics.With("File", item.FileName), metrics.With("Overwrite", item.DontOverride), metrics.With("Dir", item.Dir),
+			metrics.With("DestinationDir", namedFileDir),
+			metrics.With("DestinationFile", namedFile))
 		return err
 	}
 
-	log.Emit(metrics.Info("Resolved WriteDirective").
-		With("op", "writefile").
-		With("action", events.FileCreated{
+	log.Emit(metrics.Info("Resolved WriteDirective"),
+		metrics.With("op", "writefile"),
+		metrics.With("action", events.FileCreated{
 			Error:   err,
 			Written: written,
 			Action: actions.CreateFile{
@@ -939,38 +945,38 @@ func WriteDirective(log metrics.Metrics, toDir string, doFileOverwrite bool, ite
 
 // ParsePackage takes the provided package declrations parsing all internals with the appropriate generators suited to the type and annotations.
 func ParsePackage(toDir string, log metrics.Metrics, provider *AnnotationRegistry, doFileOverwrite bool, pkgDeclrs Package) error {
-	log.Emit(metrics.Info("Begin ParsePackage").With("toDir", toDir).
-		With("overwriter-file", doFileOverwrite).
-		With("package", pkgDeclrs.Path))
+	log.Emit(metrics.Info("Begin ParsePackage"), metrics.With("toDir", toDir),
+		metrics.With("overwriter-file", doFileOverwrite),
+		metrics.With("package", pkgDeclrs.Path))
 
 	for _, pkg := range pkgDeclrs.Packages {
-		log.Emit(metrics.Info("ParsePackage: Parse PackageDeclaration").
-			With("toDir", toDir).With("overwriter-file", doFileOverwrite).
-			With("package", pkg.Package).
-			With("From", pkg.FilePath))
+		log.Emit(metrics.Info("ParsePackage: Parse PackageDeclaration"),
+			metrics.With("toDir", toDir), metrics.With("overwriter-file", doFileOverwrite),
+			metrics.With("package", pkg.Package),
+			metrics.With("From", pkg.FilePath))
 
 		wdrs, err := provider.ParseDeclr(pkgDeclrs, pkg, toDir)
 		if err != nil {
-			log.Emit(metrics.Error(fmt.Errorf("ParseFailure: Package %q", pkg.Package)).
-				With("error", err.Error()).With("package", pkg.Package))
+			log.Emit(metrics.Error(fmt.Errorf("ParseFailure: Package %q", pkg.Package)),
+				metrics.With("error", err.Error()), metrics.With("package", pkg.Package))
 			continue
 		}
 
-		log.Emit(metrics.Info("ParseSuccess").With("From", pkg.FilePath).With("package", pkg.Package).With("Directives", len(wdrs)))
+		log.Emit(metrics.Info("ParseSuccess"), metrics.With("From", pkg.FilePath), metrics.With("package", pkg.Package), metrics.With("Directives", len(wdrs)))
 
 		for _, wd := range wdrs {
 			if err := WriteDirective(log, toDir, doFileOverwrite, wd.WriteDirective); err != nil {
-				log.Emit(metrics.Info("Annotation Resolved").With("annotation", wd.Annotation).
-					With("dir", toDir).
-					With("package", pkg.Package).
-					With("file", pkg.File))
+				log.Emit(metrics.Info("Annotation Resolved"), metrics.With("annotation", wd.Annotation),
+					metrics.With("dir", toDir),
+					metrics.With("package", pkg.Package),
+					metrics.With("file", pkg.File))
 				continue
 			}
 
-			log.Emit(metrics.Info("Annotation Resolved").With("annotation", wd.Annotation).
-				With("dir", toDir).
-				With("package", pkg.Package).
-				With("file", pkg.File))
+			log.Emit(metrics.Info("Annotation Resolved"), metrics.With("annotation", wd.Annotation),
+				metrics.With("dir", toDir),
+				metrics.With("package", pkg.Package),
+				metrics.With("file", pkg.File))
 		}
 
 	}

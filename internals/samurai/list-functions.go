@@ -71,7 +71,7 @@ func ListFunctions(vlog, events metrics.Metrics, targetDir string, ctx build.Con
 		list.Subs[res.Path] = res
 		return nil
 	}); err != nil {
-		events.Emit(metrics.Error(err).With("dir", targetDir))
+		events.Emit(metrics.Error(err), metrics.With("dir", targetDir))
 		return list, err
 	}
 
@@ -102,7 +102,7 @@ func ListFunctionsForDir(vlog, events metrics.Metrics, dir string, ctx build.Con
 			return pkgFuncs, ErrSkipDir
 		}
 
-		events.Emit(metrics.Error(err).With("dir", dir))
+		events.Emit(metrics.Error(err), metrics.With("dir", dir))
 		return pkgFuncs, err
 	}
 

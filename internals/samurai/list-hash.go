@@ -55,7 +55,7 @@ func ListPackageHash(vlog, events metrics.Metrics, targetDir string, ctx build.C
 		hash = append(hash, []byte(res.Hash)...)
 		return nil
 	}); err != nil {
-		events.Emit(metrics.Error(err).With("dir", targetDir))
+		events.Emit(metrics.Error(err), metrics.With("dir", targetDir))
 		return list, err
 	}
 
@@ -86,7 +86,7 @@ func HashPackages(vlog, events metrics.Metrics, dir string, ctx build.Context) (
 			return pkgFuncs, ErrSkipDir
 		}
 
-		events.Emit(metrics.Error(err).With("dir", dir))
+		events.Emit(metrics.Error(err), metrics.With("dir", dir))
 		return pkgFuncs, err
 	}
 

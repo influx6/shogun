@@ -11,13 +11,18 @@ import (
 	"time"
 
 	"github.com/fatih/color"
+	"gopkg.in/mgo.v2/bson"
 
 	"github.com/influx6/faux/metrics"
 	"github.com/influx6/faux/reflection"
 )
 
 var (
-	green = color.New(color.FgGreen)
+	red     = color.New(color.FgRed)
+	green   = color.New(color.FgGreen)
+	white   = color.New(color.FgWhite)
+	yellow  = color.New(color.FgHiYellow)
+	magenta = color.New(color.FgHiMagenta)
 )
 
 // FlatDisplay writes giving Entries as seperated blocks of contents where the each content is
@@ -27,7 +32,7 @@ var (
 //
 //  Message: We must create new standard behaviour 	Function: BuildPack  |  display: red,  words: 20,
 //
-func FlatDisplay(w io.Writer) metrics.Metrics {
+func FlatDisplay(w io.Writer) metrics.Processors {
 	return FlatDisplayWith(w, "Message:", nil)
 }
 
@@ -38,7 +43,7 @@ func FlatDisplay(w io.Writer) metrics.Metrics {
 //
 //  [Header]: We must create new standard behaviour 	Function: BuildPack  |  display: red,  words: 20,
 //
-func FlatDisplayWith(w io.Writer, header string, filterFn func(metrics.Entry) bool) metrics.Metrics {
+func FlatDisplayWith(w io.Writer, header string, filterFn func(metrics.Entry) bool) metrics.Processors {
 	return NewEmitter(w, func(en metrics.Entry) []byte {
 		if filterFn != nil && !filterFn(en) {
 			return nil
@@ -48,9 +53,9 @@ func FlatDisplayWith(w io.Writer, header string, filterFn func(metrics.Entry) bo
 		bu.WriteString("\n")
 
 		if header != "" {
-			fmt.Fprintf(&bu, "%s %+s", green.Sprint(header), en.Message)
+			fmt.Fprintf(&bu, "%s %+s", green.Sprint(header), printAtLevel(en.Level, en.Message))
 		} else {
-			fmt.Fprintf(&bu, "%+s", en.Message)
+			fmt.Fprintf(&bu, "%+s", printAtLevel(en.Level, en.Message))
 		}
 
 		fmt.Fprint(&bu, printSpaceLine(2))
@@ -88,7 +93,7 @@ func FlatDisplayWith(w io.Writer, header string, filterFn func(metrics.Entry) bo
 //  | displayrange.bolder.size |  20      |
 //  +--------------------------+----------+
 //
-func BlockDisplay(w io.Writer) metrics.Metrics {
+func BlockDisplay(w io.Writer) metrics.Processors {
 	return BlockDisplayWith(w, "Message:", nil)
 }
 
@@ -104,7 +109,7 @@ func BlockDisplay(w io.Writer) metrics.Metrics {
 //  | displayrange.bolder.size |  20      |
 //  +--------------------------+----------+
 //
-func BlockDisplayWith(w io.Writer, header string, filterFn func(metrics.Entry) bool) metrics.Metrics {
+func BlockDisplayWith(w io.Writer, header string, filterFn func(metrics.Entry) bool) metrics.Processors {
 	return NewEmitter(w, func(en metrics.Entry) []byte {
 		if filterFn != nil && !filterFn(en) {
 			return nil
@@ -112,9 +117,9 @@ func BlockDisplayWith(w io.Writer, header string, filterFn func(metrics.Entry) b
 
 		var bu bytes.Buffer
 		if header != "" {
-			fmt.Fprintf(&bu, "%s %+s\n", green.Sprint(header), en.Message)
+			fmt.Fprintf(&bu, "%s %+s\n", green.Sprint(header), printAtLevel(en.Level, en.Message))
 		} else {
-			fmt.Fprintf(&bu, "%+s\n", en.Message)
+			fmt.Fprintf(&bu, "%+s\n", printAtLevel(en.Level, en.Message))
 		}
 
 		if en.Function != "" {
@@ -153,7 +158,7 @@ func BlockDisplayWith(w io.Writer, header string, filterFn func(metrics.Entry) b
 //  - displayrange.address.bolder: "No 20 tokura flag"
 //  - displayrange.bolder.size:  20
 //
-func StackDisplay(w io.Writer) metrics.Metrics {
+func StackDisplay(w io.Writer) metrics.Processors {
 	return StackDisplayWith(w, "Message:", "-", nil)
 }
 
@@ -165,7 +170,7 @@ func StackDisplay(w io.Writer) metrics.Metrics {
 //  [tag] displayrange.address.bolder: "No 20 tokura flag"
 //  [tag] displayrange.bolder.size:  20
 //
-func StackDisplayWith(w io.Writer, header string, tag string, filterFn func(metrics.Entry) bool) metrics.Metrics {
+func StackDisplayWith(w io.Writer, header string, tag string, filterFn func(metrics.Entry) bool) metrics.Processors {
 	return NewEmitter(w, func(en metrics.Entry) []byte {
 		if filterFn != nil && !filterFn(en) {
 			return nil
@@ -173,9 +178,9 @@ func StackDisplayWith(w io.Writer, header string, tag string, filterFn func(metr
 
 		var bu bytes.Buffer
 		if header != "" {
-			fmt.Fprintf(&bu, "%s %+s\n", green.Sprint(header), en.Message)
+			fmt.Fprintf(&bu, "%s %+s\n", green.Sprint(header), printAtLevel(en.Level, en.Message))
 		} else {
-			fmt.Fprintf(&bu, "%+s\n", en.Message)
+			fmt.Fprintf(&bu, "%+s\n", printAtLevel(en.Level, en.Message))
 		}
 
 		if tag == "" {
@@ -198,20 +203,6 @@ func StackDisplayWith(w io.Writer, header string, tag string, filterFn func(metr
 
 //=====================================================================================
 
-// SwitchEmitter returns a emitter that converts the behaviour of the output based on giving key and value from
-// each Entry.
-func SwitchEmitter(keyName string, w io.Writer, transformers map[string]func(metrics.Entry) []byte) metrics.Metrics {
-	emitters := make(map[string]metrics.Metrics)
-
-	for id, tm := range transformers {
-		emitters[id] = NewEmitter(w, tm)
-	}
-
-	return metrics.Switch(keyName, emitters)
-}
-
-//=====================================================================================
-
 // Emitter emits all entries into the entries into a sink io.writer after
 // transformation from giving transformer function..
 type Emitter struct {
@@ -227,13 +218,28 @@ func NewEmitter(w io.Writer, transform func(metrics.Entry) []byte) *Emitter {
 	}
 }
 
-// Emit implements the metrics.metrics interface.
-func (ce *Emitter) Emit(e metrics.Entry) error {
+// Handle implements the metrics.metrics interface.
+func (ce *Emitter) Handle(e metrics.Entry) error {
 	_, err := ce.Sink.Write(ce.Transform(e))
 	return err
 }
 
 //=====================================================================================
+
+func printAtLevel(lvl metrics.Level, message string) string {
+	switch lvl {
+	case metrics.ErrorLvl:
+		return red.Sprint(message)
+	case metrics.InfoLvl:
+		return white.Sprint(message)
+	case metrics.RedAlertLvl:
+		return magenta.Sprint(message)
+	case metrics.YellowAlertLvl:
+		return yellow.Sprint(message)
+	}
+
+	return message
+}
 
 func printSpaceLine(length int) string {
 	var lines []string
@@ -288,6 +294,9 @@ func printInDepth(item interface{}, do func(key []string, val string), depth int
 			if sm, ok := item.(stringer); ok {
 				val["object.String"] = sm.String()
 			}
+			if sm, ok := item.(error); ok {
+				val["object.ErrorMessage"] = sm.Error()
+			}
 			printMap(val, do, depth+1)
 		}
 
@@ -332,6 +341,8 @@ func printMap(items interface{}, do func(key []string, val string), depth int) {
 		for index, item := range bo {
 			do([]string{index}, printValue(item))
 		}
+	case bson.M:
+		print(map[string]interface{}(bo), do)
 	case map[string][]interface{}:
 		for index, item := range bo {
 			printInDepth(item, func(key []string, value string) {

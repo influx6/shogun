@@ -13,7 +13,7 @@ var (
 // MetricConsumer exposes a interface which allows the consumption of Entries
 // into a underline system, which can be started through it's run method.
 type MetricConsumer interface {
-	Metrics
+	Processors
 	Run(<-chan struct{})
 }
 
@@ -43,10 +43,10 @@ type batchConsumer struct {
 	fn        CommitFunction
 }
 
-// Emit takes provided entries and emits giving entries into batch,
+// Handle takes provided entries and emits giving entries into batch,
 // returning any error encountered with the addition of the entry
 // or one received during the last commit of the entries.
-func (bm *batchConsumer) Emit(en Entry) error {
+func (bm *batchConsumer) Handle(en Entry) error {
 	if bm.commitErr != nil {
 		return bm.commitErr
 	}
