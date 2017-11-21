@@ -111,7 +111,7 @@ func ListFunctionsForDir(vlog, events metrics.Metrics, dir string, ctx build.Con
 	}
 
 	pkgItem := pkgs[0]
-	if pkgItem.HasAnnotation("@shogunIgnore") {
+	if pkgItem.HasAnnotation("@ignore") {
 		return pkgFuncs, ErrSkipDir
 	}
 
