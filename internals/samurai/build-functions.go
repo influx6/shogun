@@ -42,7 +42,7 @@ type BuildFunctions struct {
 }
 
 // BuildPackage builds a shogun binarie commandline files for giving directory and 1 level directory.
-func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdDir string, cuDir string, binaryPath string, skipBuild bool, removeFiles bool, dontCombineRoot bool, dontBuildSub bool, ctx build.Context) (BuildFunctions, error) {
+func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdDir string, cuDir string, binaryPath string, notest bool, skipBuild bool, removeFiles bool, dontCombineRoot bool, dontBuildSub bool, ctx build.Context) (BuildFunctions, error) {
 	var list BuildFunctions
 	list.Subs = make(map[string]BuildList)
 
@@ -56,7 +56,7 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdD
 			return nil
 		}
 
-		res, err2 := BuildPackageForDir(vlog, events, abs, cmdDir, cuDir, binaryPath, skipSubBuild, removeFiles, map[string]BuildList{}, ctx)
+		res, err2 := BuildPackageForDir(vlog, events, abs, cmdDir, cuDir, binaryPath, notest, skipSubBuild, removeFiles, map[string]BuildList{}, ctx)
 		if err2 != nil {
 			if err2 == ErrSkipDir {
 				return nil
@@ -81,7 +81,7 @@ func BuildPackage(vlog metrics.Metrics, events metrics.Metrics, dir string, cmdD
 	}
 
 	var err error
-	list.Main, err = BuildPackageForDir(vlog, events, dir, cmdDir, cuDir, binaryPath, skipBuild, removeFiles, combined, ctx)
+	list.Main, err = BuildPackageForDir(vlog, events, dir, cmdDir, cuDir, binaryPath, notest, skipBuild, removeFiles, combined, ctx)
 	if err != nil {
 		events.Emit(metrics.Error(err), metrics.With("dir", dir), metrics.With("binary_path", binaryPath))
 		return list, err
@@ -141,7 +141,7 @@ func (pn BuildList) HasFauxImports() bool {
 }
 
 // BuildPackageForDir generates needed package files for creating new function based executable binaries.
-func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string, cmd string, currentDir string, binaryPath string, skipBuild bool, remove bool, subs map[string]BuildList, ctx build.Context) (BuildList, error) {
+func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string, cmd string, currentDir string, binaryPath string, notest bool, skipBuild bool, remove bool, subs map[string]BuildList, ctx build.Context) (BuildList, error) {
 	if subs == nil {
 		subs = make(map[string]BuildList)
 	}
@@ -265,26 +265,28 @@ func BuildPackageForDir(vlog metrics.Metrics, events metrics.Metrics, dir string
 	list.PkgPath = totalPackagePath
 	list.BasePkgPath = packageBinaryPath
 
-	list.List = append(list.List, gen.WriteDirective{
-		FileName: "pkg_test.go",
-		Dir:      packageBinaryFilePath,
-		Writer: fmtwriter.NewWith(vlog, gen.SourceTextWithName(
-			"shogun:src-pkg-test",
-			string(templates.Must("shogun-src-pkg-test.tml")),
-			internals.ArgumentFunctions,
-			struct {
-				PkgPath    string
-				BinaryName string
-				Subs       map[string]BuildList
-				Main       BuildList
-			}{
-				PkgPath:    totalPackagePath,
-				BinaryName: binaryName,
-				Main:       list,
-				Subs:       subs,
-			},
-		), true, true),
-	})
+	if !notest {
+		list.List = append(list.List, gen.WriteDirective{
+			FileName: "pkg_test.go",
+			Dir:      packageBinaryFilePath,
+			Writer: fmtwriter.NewWith(vlog, gen.SourceTextWithName(
+				"shogun:src-pkg-test",
+				string(templates.Must("shogun-src-pkg-test.tml")),
+				internals.ArgumentFunctions,
+				struct {
+					PkgPath    string
+					BinaryName string
+					Subs       map[string]BuildList
+					Main       BuildList
+				}{
+					PkgPath:    totalPackagePath,
+					BinaryName: binaryName,
+					Main:       list,
+					Subs:       subs,
+				},
+			), true, true),
+		})
+	}
 
 	list.List = append(list.List, gen.WriteDirective{
 		FileName: fmt.Sprintf("pkg_%s.go", binaryFileName(binaryName)),

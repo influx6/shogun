@@ -135,6 +135,10 @@ func main() {
 					Usage: "-skip to generate CLI package files without building binaries",
 				},
 				cli.BoolFlag{
+					Name:  "notest",
+					Usage: "-notest to not generate package test files",
+				},
+				cli.BoolFlag{
 					Name:  "v,verbose",
 					Usage: "-verbose to show hidden logs and operations",
 				},
@@ -350,11 +354,11 @@ func mainAction(c *cli.Context) error {
 	}
 
 	if exitCode > 0 {
-		return fmt.Errorf("Command Error: exitCode: %d\n%+q\n", exitCode, responseErr.String())
+		return fmt.Errorf("command error: exitCode: %d (%+q)", exitCode, responseErr.String())
 	}
 
 	if responseErr.Len() != 0 {
-		return fmt.Errorf("Command Error: exitCode: %d\n%+q\n", exitCode, responseErr.String())
+		return fmt.Errorf("command error: exitCode: %d (%+q)", exitCode, responseErr.String())
 	}
 
 	fmt.Println(response.String())
@@ -413,6 +417,7 @@ func buildAction(c *cli.Context) error {
 
 	skipBuild := c.Bool("skipbuild")
 	forceBuild := c.Bool("force")
+	noTest := c.Bool("notest")
 	tgDir := c.String("dir")
 	cmdDir := c.String("cmdDir")
 
@@ -431,7 +436,7 @@ func buildAction(c *cli.Context) error {
 	targetDir := filepath.Join(currentDir, tgDir)
 
 	if cmdDir == "" {
-		cmdDir = filepath.Join(".shogun", "cmd")
+		cmdDir = "cmd"
 	}
 
 	ctx := build.Default
@@ -450,7 +455,7 @@ func buildAction(c *cli.Context) error {
 	}
 
 	// Build directories for commands.
-	directive, err := samurai.BuildPackage(events, events, targetDir, cmdDir, currentDir, binaryPath, skipBuild, c.Bool("remove"), c.Bool("singlepkg"), c.Bool("skipsub"), ctx)
+	directive, err := samurai.BuildPackage(events, events, targetDir, cmdDir, currentDir, binaryPath, skipBuild, noTest, c.Bool("remove"), c.Bool("singlepkg"), c.Bool("skipsub"), ctx)
 	if err != nil {
 		events.Emit(metrics.Error(err), metrics.With("dir", currentDir), metrics.With("binary_path", binaryPath))
 		return err
