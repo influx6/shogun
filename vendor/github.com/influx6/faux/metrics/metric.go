@@ -43,6 +43,10 @@ type metrics struct {
 // Emit implements the Metrics interface and delivers Entry
 // to undeline metrics.
 func (m metrics) Emit(mods ...EntryMod) error {
+	if len(m.processors) == 0 {
+		return nil
+	}
+
 	var en Entry
 	Apply(&en, mods...)
 

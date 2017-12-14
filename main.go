@@ -127,12 +127,12 @@ func main() {
 					Usage: "-singlePkg=true to only bundle seperate command binaries",
 				},
 				cli.BoolFlag{
-					Name:  "skipsub,skipsubcommandbuild",
-					Usage: "-skipsub to only generate combined binary for root and not for sub packages",
-				},
-				cli.BoolFlag{
 					Name:  "skip,skipbuild",
 					Usage: "-skip to generate CLI package files without building binaries",
+				},
+				cli.BoolFlag{
+					Name:  "nomain",
+					Usage: "-nomain to not generate package main.go files",
 				},
 				cli.BoolFlag{
 					Name:  "notest",
@@ -416,10 +416,12 @@ func buildAction(c *cli.Context) error {
 	}
 
 	skipBuild := c.Bool("skipbuild")
+	nomain := c.Bool("nomain")
 	forceBuild := c.Bool("force")
 	noTest := c.Bool("notest")
 	tgDir := c.String("dir")
 	cmdDir := c.String("cmdDir")
+	singlePkgs := c.Bool("singlepkg")
 
 	binaryPath := binPath()
 	currentDir, err := os.Getwd()
@@ -435,7 +437,7 @@ func buildAction(c *cli.Context) error {
 
 	targetDir := filepath.Join(currentDir, tgDir)
 
-	if cmdDir == "" {
+	if cmdDir == "" && !nomain {
 		cmdDir = "cmd"
 	}
 
@@ -454,8 +456,18 @@ func buildAction(c *cli.Context) error {
 		return err
 	}
 
+	var packager samurai.BuildPackager
+	packager.Cmd = cmdDir
+	packager.Dir = targetDir
+	packager.CurrentDir = currentDir
+	packager.BinaryPath = binaryPath
+	packager.SkipBuild = skipBuild
+	packager.NoMain = nomain
+	packager.NoTest = noTest
+	packager.RemovePreviousBuilds = c.Bool("remove")
+
 	// Build directories for commands.
-	directive, err := samurai.BuildPackage(events, events, targetDir, cmdDir, currentDir, binaryPath, skipBuild, noTest, c.Bool("remove"), c.Bool("singlepkg"), c.Bool("skipsub"), ctx)
+	directive, err := samurai.BuildPackage(events, events, ctx, packager, singlePkgs)
 	if err != nil {
 		events.Emit(metrics.Error(err), metrics.With("dir", currentDir), metrics.With("binary_path", binaryPath))
 		return err
@@ -465,7 +477,7 @@ func buildAction(c *cli.Context) error {
 
 	for _, sub := range directive.Subs {
 		if hashData, ok := hashList.Subs[sub.Path]; ok {
-			hashFile := filepath.Join(goSrcPath, filepath.Dir(sub.PkgPath), ".hashfile")
+			hashFile := filepath.Join(goSrcPath, filepath.Dir(sub.PkgSrcPath), ".hashfile")
 			prevHash, err := readFile(hashFile)
 
 			if err == nil && prevHash == hashData.Hash && !forceBuild {
@@ -475,12 +487,12 @@ func buildAction(c *cli.Context) error {
 
 		// if PkgPath is empty then possibly not one we want to handle, all must
 		// have a place to store
-		if sub.PkgPath == "" || len(sub.List) == 0 {
+		if sub.PkgPath == "" || len(sub.Sources) == 0 {
 			continue
 		}
 
 		subUpdated = true
-		if err := ast.SimpleWriteDirectives("./", true, sub.List...); err != nil {
+		if err := ast.SimpleWriteDirectives("./", true, sub.Sources...); err != nil {
 			events.Emit(metrics.Error(err), metrics.With("dir", currentDir), metrics.With("binary_path", binaryPath))
 			return err
 		}
@@ -488,14 +500,14 @@ func buildAction(c *cli.Context) error {
 
 	// Validate hash of main cmd.
 	if !forceBuild {
-		hashFile := filepath.Join(goSrcPath, filepath.Dir(directive.Main.PkgPath), ".hashfile")
+		hashFile := filepath.Join(goSrcPath, filepath.Dir(directive.Main.PkgSrcPath), ".hashfile")
 		prevHash, err := readFile(hashFile)
 		if err == nil && prevHash == hashList.Main.Hash && !subUpdated {
 			return nil
 		}
 	}
 
-	if err := ast.SimpleWriteDirectives("./", true, directive.Main.List...); err != nil {
+	if err := ast.SimpleWriteDirectives("./", true, directive.Main.Sources...); err != nil {
 		events.Emit(metrics.Error(err), metrics.With("dir", currentDir), metrics.With("binary_path", binaryPath))
 		return err
 	}

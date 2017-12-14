@@ -15,19 +15,19 @@ import (
 // against go fmt and returns the result.
 type WriterTo struct {
 	io.WriterTo
-	goimport        bool
+	goreturn        bool
 	attemptFallback bool
 	Metrics         metrics.Metrics
 }
 
 // New returns a new instance of FmtWriterTo.
-func New(wt io.WriterTo, useGoImports bool, attemptFallbackToFmtInError bool) *WriterTo {
-	return &WriterTo{WriterTo: wt, goimport: useGoImports, attemptFallback: attemptFallbackToFmtInError, Metrics: metrics.New()}
+func New(wt io.WriterTo, useGoReturns bool, attemptFallbackToFmtInError bool) *WriterTo {
+	return &WriterTo{WriterTo: wt, goreturn: useGoReturns, attemptFallback: attemptFallbackToFmtInError, Metrics: metrics.New()}
 }
 
 // NewWith returns a new instance of FmtWriterTo.
-func NewWith(m metrics.Metrics, wt io.WriterTo, useGoImports bool, attemptFallbackToFmtInError bool) *WriterTo {
-	return &WriterTo{WriterTo: wt, goimport: useGoImports, attemptFallback: attemptFallbackToFmtInError, Metrics: m}
+func NewWith(m metrics.Metrics, wt io.WriterTo, useGoReturns bool, attemptFallbackToFmtInError bool) *WriterTo {
+	return &WriterTo{WriterTo: wt, goreturn: useGoReturns, attemptFallback: attemptFallbackToFmtInError, Metrics: m}
 }
 
 // WriteTo writes the content of the source after running against gofmt to the
@@ -44,9 +44,9 @@ func (fm WriterTo) WriteTo(w io.Writer) (int64, error) {
 	}
 
 	cmdName := "gofmt"
-	if fm.goimport {
-		if _, err := gexec.LookPath("goimports"); err == nil {
-			cmdName = "goimports"
+	if fm.goreturn {
+		if _, err := gexec.LookPath("goreturns"); err == nil {
+			cmdName = "goreturns"
 		} else {
 			cmdName = "gofmt"
 		}
@@ -61,8 +61,8 @@ func (fm WriterTo) WriteTo(w io.Writer) (int64, error) {
 
 	if err := cmd.Exec(context.Background(), fm.Metrics); err != nil {
 
-		// If we must attempt to fallback to gofmt, due to goimport error, attempt to
-		if fm.goimport && fm.attemptFallback {
+		// If we must attempt to fallback to gofmt, due to goreturn error, attempt to
+		if fm.goreturn && fm.attemptFallback {
 			fmt.Printf("------------------------- ATTEMPTING GOFMT FALLBACK (GOIMPORTS FAILED) --------------------------------------------\n")
 			fmt.Printf("Error:\n%s\n", err.Error())
 			fmt.Printf("---------------------------------------------------------------------\n")

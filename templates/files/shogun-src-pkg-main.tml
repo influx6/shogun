@@ -8,7 +8,7 @@ import (
 
 	"github.com/fatih/color"
 	"github.com/minio/cli"
-	{{quote .MainPackage }}
+	pkg {{quote .MainPackage }}
 )
 
 

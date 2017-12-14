@@ -1,4 +1,4 @@
-package pkg_test
+package {{.Main.PkgName}}_test
 
 import (
 	"bytes"
@@ -8,7 +8,7 @@ import (
 	"io"
 	"testing"
 
-	{{quote .PkgPath}}
+	pkg {{quote .PkgPath}}
 	"github.com/influx6/faux/context"
 	"github.com/influx6/faux/tests"
 	"github.com/influx6/shogun/internals"

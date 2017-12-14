@@ -334,10 +334,13 @@ var ErrNotStruct = errors.New("Not a struct type")
 
 // Field defines a specific tag field with its details from a giving struct.
 type Field struct {
+	Index int
 	Name  string
 	Tag   string
 	Type  reflect.Type
-	Index int
+	Value reflect.Value
+	// NameLC is the name in lower case.
+	NameLC string
 }
 
 // Fields defines a lists of Field instances.
@@ -351,9 +354,18 @@ func GetTagFields(elem interface{}, tag string, allowNaturalNames bool) (Fields,
 	}
 
 	tl := reflect.TypeOf(elem)
+	tlVal := reflect.ValueOf(elem)
 
 	if tl.Kind() == reflect.Ptr {
 		tl = tl.Elem()
+	}
+
+	if tlVal.Kind() == reflect.Ptr {
+		if tlVal.IsNil() {
+			return nil, errors.New("invalid value: must be non-nil struct")
+		}
+
+		tlVal = tlVal.Elem()
 	}
 
 	var fields Fields
@@ -378,10 +390,12 @@ func GetTagFields(elem interface{}, tag string, allowNaturalNames bool) (Fields,
 		}
 
 		fields = append(fields, Field{
-			Name:  field.Name,
-			Type:  field.Type,
-			Index: i,
-			Tag:   tagVal,
+			Index:  i,
+			Tag:    tagVal,
+			Name:   field.Name,
+			Type:   field.Type,
+			Value:  tlVal.Field(i),
+			NameLC: strings.ToLower(field.Name),
 		})
 	}
 
@@ -405,25 +419,14 @@ func ToMap(tag string, elem interface{}, allowNaturalNames bool) (map[string]int
 
 	data := make(map[string]interface{})
 
-	tl := reflect.ValueOf(elem)
-	if tl.Kind() == reflect.Ptr {
-		if tl.IsNil() {
-			return data, errors.New("Provide object/value is nil")
-		}
-
-		tl = tl.Elem()
-	}
-
 	// Loop through  the fields and set the appropriate value as needed.
 	for _, field := range fields {
-		fl := tl.Field(field.Index)
-
-		if !fl.CanInterface() {
+		if !field.Value.CanInterface() {
 			continue
 		}
 
-		item := fl.Interface()
-		itemType := fl.Type()
+		itemType := field.Type
+		item := field.Value.Interface()
 
 		switch itemType.Kind() {
 		case reflect.Struct:

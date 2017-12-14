@@ -94,14 +94,14 @@ func WithTimelapse(message string, f Field) EntryMod {
 
 // YellowAlert returns an Entry with the level set to YellowAlertLvl.
 func YellowAlert(err error, message string, m ...interface{}) EntryMod {
-	return Partial(withMessageAt(5, YellowAlertLvl, message, m...), func(en *Entry) {
+	return Partial(withMessageAt(4, YellowAlertLvl, message, m...), func(en *Entry) {
 		en.Field["error"] = err
 	})
 }
 
 // RedAlert returns an Entry with the level set to RedAlertLvl.
 func RedAlert(err error, message string, m ...interface{}) EntryMod {
-	return Partial(withMessageAt(5, RedAlertLvl, message, m...), func(en *Entry) {
+	return Partial(withMessageAt(4, RedAlertLvl, message, m...), func(en *Entry) {
 		en.Field["error"] = err
 	})
 }
@@ -111,7 +111,7 @@ func RedAlert(err error, message string, m ...interface{}) EntryMod {
 // and the error is added as a key-value within the Entry fields.
 func Errorf(message string, m ...interface{}) EntryMod {
 	err := fmt.Errorf(message, m...)
-	return Partial(withMessageAt(5, ErrorLvl, err.Error()), func(en *Entry) {
+	return Partial(withMessageAt(4, ErrorLvl, err.Error()), func(en *Entry) {
 		en.Field["error"] = err
 	})
 }
@@ -119,14 +119,14 @@ func Errorf(message string, m ...interface{}) EntryMod {
 // Error returns a entry where the message is the provided error.Error() value
 // and the error is added as a key-value within the Entry fields.
 func Error(err error) EntryMod {
-	return Partial(withMessageAt(5, ErrorLvl, err.Error()), func(en *Entry) {
+	return Partial(withMessageAt(4, ErrorLvl, err.Error()), func(en *Entry) {
 		en.Field["error"] = err
 	})
 }
 
 // Info returns an Entry with the level set to Info.
 func Info(message string, m ...interface{}) EntryMod {
-	return withMessageAt(5, InfoLvl, message, m...)
+	return withMessageAt(4, InfoLvl, message, m...)
 }
 
 // Message returns a new Entry with the provided Level and message used.
@@ -138,7 +138,7 @@ func Message(message string, m ...interface{}) EntryMod {
 
 // WithMessage returns a new Entry with the provided Level and message used.
 func WithMessage(level Level, message string, m ...interface{}) EntryMod {
-	return withMessageAt(5, level, message, m...)
+	return withMessageAt(4, level, message, m...)
 }
 
 // withMessage returns a new Entry with the provided Level and message used.
