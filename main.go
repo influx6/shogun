@@ -114,6 +114,11 @@ func main() {
 					Usage: "-dir=./katanas to build specific directory instead of root.",
 				},
 				cli.StringFlag{
+					Name:  "bin,binDir",
+					Value: "",
+					Usage: "-bin=./ to save binary into giving bin.",
+				},
+				cli.StringFlag{
 					Name:  "cmd,cmdDir",
 					Value: "",
 					Usage: "-cmd=./cmd to build CLI package files into relative directory.",
@@ -421,9 +426,14 @@ func buildAction(c *cli.Context) error {
 	noTest := c.Bool("notest")
 	tgDir := c.String("dir")
 	cmdDir := c.String("cmdDir")
+	binDir := c.String("binDir")
 	singlePkgs := c.Bool("singlepkg")
 
 	binaryPath := binPath()
+	if binDir != "" {
+		binaryPath = binDir
+	}
+
 	currentDir, err := os.Getwd()
 	if err != nil {
 		events.Emit(metrics.Error(err), metrics.With("dir", currentDir), metrics.With("binary_path", binaryPath))

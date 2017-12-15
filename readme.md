@@ -344,11 +344,16 @@ shogun build -skip
 shogun build -d=./examples
 ```
 
-- Build a shogun based package files in a directory and only generate binary for
-root shogun files
+- Build only shogun based package files into root as packages without main file
 
 ```bash
-shogun build -skipsub -d=./examples
+shogun build -nomain
+```
+
+- Build shogun based package files binary in directory path
+
+```bash
+shogun build -bin=./
 ```
 
 - Build a shogun based package files in a directory and split binaries as single
