@@ -487,9 +487,8 @@ func buildAction(c *cli.Context) error {
 
 	for _, sub := range directive.Subs {
 		if hashData, ok := hashList.Subs[sub.Path]; ok {
-			hashFile := filepath.Join(goSrcPath, filepath.Dir(sub.PkgSrcPath), ".hashfile")
+			hashFile := filepath.Join(goSrcPath, sub.PkgSrcPath, ".hashfile")
 			prevHash, err := readFile(hashFile)
-
 			if err == nil && prevHash == hashData.Hash && !forceBuild {
 				continue
 			}
@@ -510,7 +509,7 @@ func buildAction(c *cli.Context) error {
 
 	// Validate hash of main cmd.
 	if !forceBuild {
-		hashFile := filepath.Join(goSrcPath, filepath.Dir(directive.Main.PkgSrcPath), ".hashfile")
+		hashFile := filepath.Join(goSrcPath, directive.Main.PkgSrcPath, ".hashfile")
 		prevHash, err := readFile(hashFile)
 		if err == nil && prevHash == hashList.Main.Hash && !subUpdated {
 			return nil
