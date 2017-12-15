@@ -436,10 +436,17 @@ func Build(b BuildPackager, ctx build.Context, buildMetrics metrics.Metrics, com
 				fmt.Printf("Built binary for shogun %q into %q\n", binaryName, b.BinaryPath)
 
 				if b.RemovePreviousBuilds {
-					fmt.Printf("Cleaning up shogun binary build files... %q\n", binaryName)
+					fmt.Printf("Cleaning up shogun binary build files... %q in %+q\n", binaryName, packageBinaryPath)
 					if err := os.RemoveAll(filepath.Join(b.Dir, packageBinaryPath)); err != nil {
 						fmt.Printf("Failed to properly cleanup build files %q\n\n", binaryName)
 						return err
+					}
+
+					for _, sub := range b.Subs {
+						fmt.Printf("Cleaning up build files... %q\n", sub.PkgSrcPath)
+						if err := os.RemoveAll(filepath.Join(b.Dir, sub.PkgSrcPath)); err != nil {
+							fmt.Printf("Failed to remove build files %q\n\n", sub.PkgSrcPath)
+						}
 					}
 				}
 
