@@ -72,7 +72,7 @@ func helpAction(c *cli.Context) error {
 func mainAction(c *cli.Context) error {
 	input := io.Reader(os.Stdin)
 
-	flags, args := internals.FilterFlags(c.Args().Tail())
+	flags, _ := internals.FilterFlags(c.Args().Tail())
 	tm, terr := time.ParseDuration(c.String("timeout"))
 	if terr != nil {
 		tm = 0
