@@ -442,13 +442,6 @@ shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 echo "We lost the war" | shogun {{BINARYNAME}} {{FUNCTIONNAME}}
 ```
 
-- Run function of package binary using remaining arguments apart from `{{BINARYNAME}}`
-and `{{FUNCTIONNAME}}` has input
-
-```bash
-shogun {{BINARYNAME}} {{FUNCTIONNAME}} "We lost the war"
-```
-
 - Run function of package binary expecting json input with standard input
 
 ```bash

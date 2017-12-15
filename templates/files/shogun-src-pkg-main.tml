@@ -73,10 +73,6 @@ func mainAction(c *cli.Context) error {
 	input := io.Reader(os.Stdin)
 
 	flags, args := internals.FilterFlags(c.Args().Tail())
-	if !stdinHasData() && len(args) != 0 {
-		input = bytes.NewBufferString(strings.Join(args, " "))
-	}
-
 	tm, terr := time.ParseDuration(c.String("timeout"))
 	if terr != nil {
 		tm = 0
