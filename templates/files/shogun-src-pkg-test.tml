@@ -2,7 +2,7 @@ package {{.Main.PkgName}}_test
 
 import (
 	"bytes"
-	gctx "context"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -626,13 +626,9 @@ func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 
 	realFunc := fun.Function.(func({{.Imports.Type}}, io.WriteCloser))
 	realGCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser))
-	realFCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser))
-	realCnFCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser))
 
 	realFuncWithReturn := fun.Function.(func({{.Imports.Type}}, io.WriteCloser) error)
 	realGCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser) error)
-	realFCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser) error)
-	realCnFCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser) error)
 
   {{if hasPrefix .Imports.Type "*"}}
   var data {{ trimPrefix .Imports.Type "*"}}
@@ -661,30 +657,6 @@ func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 
 			if fun.Return == internals.ErrorReturn {
 				err = realGCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
-			}
-
-			return nil
-		}, 0)
-	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.Context) error {
-			if fun.Return == internals.NoReturn {
-				if realCnFCtxFunc != nil {
-					realCnFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
-				}
-
-				if realFCtxFunc != nil {
-					realFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
-				}
-			}
-
-			if fun.Return == internals.ErrorReturn {
-				if realFCtxFuncWithReturn != nil {
-					err = realFCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
-				}
-
-				if realCnFCtxFuncWithReturn != nil {
-					err = realCnFCtxFuncWithReturn(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
-				}
 			}
 
 			return nil

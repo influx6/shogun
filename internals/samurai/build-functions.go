@@ -326,28 +326,28 @@ func Build(b BuildPackager, ctx build.Context, buildMetrics metrics.Metrics, com
 		return list, fmt.Errorf("Failed to generate binary %q help message: %+q", binaryName, err)
 	}
 
-	if !b.NoTest {
-		list.Sources = append(list.Sources, gen.WriteDirective{
-			FileName: "pkg_test.go",
-			Dir:      packageBinaryFilePath,
-			Writer: fmtwriter.NewWith(commandMetrics, gen.SourceTextWithName(
-				"shogun:src-pkg-test",
-				string(templates.Must("shogun-src-pkg-test.tml")),
-				internals.ArgumentFunctions,
-				struct {
-					PkgPath    string
-					BinaryName string
-					Subs       map[string]BuildList
-					Main       BuildList
-				}{
-					PkgPath:    totalPackagePath,
-					BinaryName: binaryName,
-					Main:       list,
-					Subs:       b.Subs,
-				},
-			), true, true),
-		})
-	}
+	//if !b.NoTest {
+	//	list.Sources = append(list.Sources, gen.WriteDirective{
+	//		FileName: "pkg_test.go",
+	//		Dir:      packageBinaryFilePath,
+	//		Writer: fmtwriter.NewWith(commandMetrics, gen.SourceTextWithName(
+	//			"shogun:src-pkg-test",
+	//			string(templates.Must("shogun-src-pkg-test.tml")),
+	//			internals.ArgumentFunctions,
+	//			struct {
+	//				PkgPath    string
+	//				BinaryName string
+	//				Subs       map[string]BuildList
+	//				Main       BuildList
+	//			}{
+	//				PkgPath:    totalPackagePath,
+	//				BinaryName: binaryName,
+	//				Main:       list,
+	//				Subs:       b.Subs,
+	//			},
+	//		), true, true),
+	//	})
+	//}
 
 	list.Sources = append(list.Sources, gen.WriteDirective{
 		FileName: fmt.Sprintf("pkg_%s.go", binaryFileName(binaryName)),

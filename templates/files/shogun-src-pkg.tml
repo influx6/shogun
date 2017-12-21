@@ -8,7 +8,7 @@ import (
   "encoding/json"
   "github.com/influx6/shogun/internals"
 {{ if .Main.HasGoogleImports }}
-  gctx "context"
+  "context"
 {{end}}
 {{ if .Main.HasFauxImports }}
   "context"
@@ -137,13 +137,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -182,13 +182,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -241,13 +241,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -294,13 +294,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -353,13 +353,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -406,13 +406,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -459,12 +459,12 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
 
@@ -522,12 +522,12 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
 
@@ -585,13 +585,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -644,13 +644,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -697,12 +697,12 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
 
@@ -750,13 +750,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -813,13 +813,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -872,13 +872,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -935,13 +935,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -1014,13 +1014,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -1059,13 +1059,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -1118,13 +1118,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -1171,13 +1171,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -1230,13 +1230,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -1283,13 +1283,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -1336,12 +1336,12 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
 
@@ -1399,12 +1399,12 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
 
@@ -1462,13 +1462,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -1521,13 +1521,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -1574,12 +1574,12 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
 
@@ -1627,13 +1627,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -1690,13 +1690,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -1749,13 +1749,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
@@ -1812,13 +1812,13 @@ func MainShogunExecute(cmd string, args []string, flags []string, incoming io.Re
               var canceller func()
 
               if ctxTimeout == 0 {
-                ctx = gctx.Background()
+                ctx = context.Background()
               }else{
-                ctx, canceller = gctx.WithTimeout(gctx.Background(), ctxTimeout)
+                ctx, canceller = context.WithTimeout(context.Background(), ctxTimeout)
               }
 
               for key, val := range flagVals {
-                ctx = gctx.WithValue(ctx, key, val)
+                ctx = context.WithValue(ctx, key, val)
               }
 
               if canceller != nil {
