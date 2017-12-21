@@ -9,7 +9,7 @@ import (
 	"testing"
 
 	pkg {{quote .PkgPath}}
-	"github.com/influx6/faux/context"
+	"context"
 	"github.com/influx6/faux/tests"
 	"github.com/influx6/shogun/internals"
 	"github.com/influx6/shogun/internals/kensho"
@@ -273,14 +273,14 @@ func test{{.Name}}Function(fun internals.ShogunFunc) {
 	incoming.WriteString(`{"name":"Rock"}`)
 
 	realFunc := fun.Function.(func({{.Imports.Type}}))
-	realGCtxFunc := fun.Function.(func(gctx.Context, {{.Imports.Type}}))
-	realFCtxFunc := fun.Function.(func(context.CancelContext, {{.Imports.Type}}))
-	realCnFCtxFunc := fun.Function.(func(context.CancelContext, {{.Imports.Type}}))
+	realGCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}))
+	realFCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}))
+	realCnFCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}))
 
 	realFuncWithReturn := fun.Function.(func({{.Imports.Type}}) error)
-	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, {{.Imports.Type}}) error)
-	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, {{.Imports.Type}}) error)
-	realCnFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, {{.Imports.Type}}) error)
+	realGCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}) error)
+	realFCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}) error)
+	realCnFCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}) error)
 
   {{if hasPrefix .Imports.Type "*"}}
   var data {{ trimPrefix .Imports.Type "*"}}
@@ -302,7 +302,7 @@ func test{{.Name}}Function(fun internals.ShogunFunc) {
 			err = realFuncWithReturn({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 		}
 	case internals.UseGoogleContext:
-		err = execWithContext(func(ctx gctx.Context) error {
+		err = execWithContext(func(ctx context.Context) error {
 			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 			}
@@ -314,7 +314,7 @@ func test{{.Name}}Function(fun internals.ShogunFunc) {
 			return nil
 		}, 0)
 	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.CancelableContext) error {
+		err = execWithContext(func(ctx context.Context) error {
 			if fun.Return == internals.NoReturn {
 			if realCnFCtxFunc != nil {
 					realCnFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
@@ -389,14 +389,14 @@ func test{{.Name}}Function(fun internals.ShogunFunc) {
 	incoming.WriteString(`{"name":"Rock"}`)
 
 	realFunc := fun.Function.(func({{.Imports.Type}}))
-	realGCtxFunc := fun.Function.(func(gctx.Context, {{.Imports.Type}}))
-	realFCtxFunc := fun.Function.(func(context.CancelContext, {{.Imports.Type}}))
-	realCnFCtxFunc := fun.Function.(func(context.CancelContext, {{.Imports.Type}}))
+	realGCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}))
+	realFCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}))
+	realCnFCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}))
 
 	realFuncWithReturn := fun.Function.(func({{.Imports.Type}}) error)
-	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, {{.Imports.Type}}) error)
-	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, {{.Imports.Type}}) error)
-	realCnFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, {{.Imports.Type}}) error)
+	realGCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}) error)
+	realFCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}) error)
+	realCnFCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}) error)
 
   {{if hasPrefix .Imports.Type "*"}}
   var data {{ trimPrefix .Imports.Type "*"}}
@@ -418,7 +418,7 @@ func test{{.Name}}Function(fun internals.ShogunFunc) {
 			err = realFuncWithReturn({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 		}
 	case internals.UseGoogleContext:
-		err = execWithContext(func(ctx gctx.Context) error {
+		err = execWithContext(func(ctx context.Context) error {
 			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
 			}
@@ -430,7 +430,7 @@ func test{{.Name}}Function(fun internals.ShogunFunc) {
 			return nil
 		}, 0)
 	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.CancelableContext) error {
+		err = execWithContext(func(ctx context.Context) error {
 			if fun.Return == internals.NoReturn {
 				if realCnFCtxFunc != nil {
 						realCnFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}})
@@ -505,14 +505,14 @@ func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 	incoming.WriteString(`{"name":"Rock"}`)
 
 	realFunc := fun.Function.(func({{.Imports.Type}}, io.WriteCloser))
-	realGCtxFunc := fun.Function.(func(gctx.Context, {{.Imports.Type}}, io.WriteCloser))
-	realFCtxFunc := fun.Function.(func(context.CancelContext, {{.Imports.Type}}, io.WriteCloser))
-	realCnFCtxFunc := fun.Function.(func(context.CancelContext, {{.Imports.Type}}, io.WriteCloser))
+	realGCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser))
+	realFCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser))
+	realCnFCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser))
 
 	realFuncWithReturn := fun.Function.(func({{.Imports.Type}}, io.WriteCloser) error)
-	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, {{.Imports.Type}}, io.WriteCloser) error)
-	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, {{.Imports.Type}}, io.WriteCloser) error)
-	realCnFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, {{.Imports.Type}}, io.WriteCloser) error)
+	realGCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser) error)
+	realFCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser) error)
+	realCnFCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser) error)
 
   {{if hasPrefix .Imports.Type "*"}}
   var data {{ trimPrefix .Imports.Type "*"}}
@@ -534,7 +534,7 @@ func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 			err = realFuncWithReturn({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 		}
 	case internals.UseGoogleContext:
-		err = execWithContext(func(ctx gctx.Context) error {
+		err = execWithContext(func(ctx context.Context) error {
 			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 			}
@@ -546,7 +546,7 @@ func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 			return nil
 		}, 0)
 	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.CancelableContext) error {
+		err = execWithContext(func(ctx context.Context) error {
 			if fun.Return == internals.NoReturn {
 				if realCnFCtxFunc != nil {
 						realCnFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
@@ -625,14 +625,14 @@ func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 	incoming.WriteString(`{"name":"Rock"}`)
 
 	realFunc := fun.Function.(func({{.Imports.Type}}, io.WriteCloser))
-	realGCtxFunc := fun.Function.(func(gctx.Context, {{.Imports.Type}}, io.WriteCloser))
-	realFCtxFunc := fun.Function.(func(context.CancelContext, {{.Imports.Type}}, io.WriteCloser))
-	realCnFCtxFunc := fun.Function.(func(context.CancelContext, {{.Imports.Type}}, io.WriteCloser))
+	realGCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser))
+	realFCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser))
+	realCnFCtxFunc := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser))
 
 	realFuncWithReturn := fun.Function.(func({{.Imports.Type}}, io.WriteCloser) error)
-	realGCtxFuncWithReturn := fun.Function.(func(gctx.Context, {{.Imports.Type}}, io.WriteCloser) error)
-	realFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, {{.Imports.Type}}, io.WriteCloser) error)
-	realCnFCtxFuncWithReturn := fun.Function.(func(context.CancelContext, {{.Imports.Type}}, io.WriteCloser) error)
+	realGCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser) error)
+	realFCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser) error)
+	realCnFCtxFuncWithReturn := fun.Function.(func(context.Context, {{.Imports.Type}}, io.WriteCloser) error)
 
   {{if hasPrefix .Imports.Type "*"}}
   var data {{ trimPrefix .Imports.Type "*"}}
@@ -654,7 +654,7 @@ func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 			err = realFuncWithReturn({{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 		}
 	case internals.UseGoogleContext:
-		err = execWithContext(func(ctx gctx.Context) error {
+		err = execWithContext(func(ctx context.Context) error {
 			if fun.Return == internals.NoReturn {
 				realGCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
 			}
@@ -666,7 +666,7 @@ func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 			return nil
 		}, 0)
 	case internals.UseFauxContext:
-		err = execWithContext(func(ctx context.CancelableContext) error {
+		err = execWithContext(func(ctx context.Context) error {
 			if fun.Return == internals.NoReturn {
 				if realCnFCtxFunc != nil {
 					realCnFCtxFunc(ctx, {{if hasPrefix .Imports.Type "*"}}&data{{else}}data{{end}}, wopCloser{Writer: &outgoing})
@@ -711,7 +711,7 @@ func test{{capitalize .Name}}WithWriterFunction(fun internals.ShogunFunc) {
 func execWithContext(fun interface{}, ctxTimeout time.Duration) error {
 	switch dfunc := fun.(type) {
 	case func(context.Context) error:
-		var ctx context.CancelableContext
+		var ctx context.Context
 
 		if ctxTimeout == 0 {
 			ctx = context.NewCnclContext(nil)
@@ -722,8 +722,8 @@ func execWithContext(fun interface{}, ctxTimeout time.Duration) error {
 		defer ctx.Cancel()
 
 		return dfunc(ctx)
-	case func(context.CancelableContext) error:
-		var ctx context.CancelableContext
+	case func(context.Context) error:
+		var ctx context.Context
 
 		if ctxTimeout == 0 {
 			ctx = context.NewCnclContext(nil)
@@ -734,8 +734,8 @@ func execWithContext(fun interface{}, ctxTimeout time.Duration) error {
 		defer ctx.Cancel()
 
 		return dfunc(ctx)
-	case func(context.CancelContext) error:
-		var ctx context.CancelableContext
+	case func(context.Context) error:
+		var ctx context.Context
 
 		if ctxTimeout == 0 {
 			ctx = context.NewCnclContext(nil)
@@ -746,8 +746,8 @@ func execWithContext(fun interface{}, ctxTimeout time.Duration) error {
 		defer ctx.Cancel()
 
 		return dfunc(ctx)
-	case func(gctx.Context) error:
-		var ctx gctx.Context
+	case func(context.Context) error:
+		var ctx context.Context
 		var canceller func()
 
 		if ctxTimeout == 0 {

@@ -103,7 +103,7 @@ will combine all other binaries into a single one if so desired.
 ### Writing Functions for Shogun
 
 Shogun focuses on the execution of functions, that supports a limited set of formats.
-More so, each format allows the use of `Context` or `CancelContext` objects
+More so, each format allows the use of `Context` or `Context` objects
 as first place arguments.
 
 - No Argument Functions
@@ -211,7 +211,7 @@ func(io.Reader, io.WriteCloser) error
 func(Context, io.Reader, io.WriteCloser) error
 ```
 
-*Where `Context` => represents the context package used of the 2 allowed.*
+*Where `Context` => represents the context package.*
 
 *Where `Struct`   => represents any struct declared in package*
 
@@ -233,7 +233,7 @@ import (
 	"fmt"
 	"io"
 
-	"github.com/influx6/faux/context"
+	"context"
 	ty "github.com/influx6/shogun/examples/types"
 )
 
@@ -250,7 +250,7 @@ func Slash() error {
 	return nil
 }
 
-func Bob(ctx context.CancelContext, name string) error {
+func Bob(ctx context.Context, name string) error {
   fmt.Printf("Welcome to bob %q.\n",name)
 	return nil
 }
@@ -268,7 +268,7 @@ binary is called without argument through shogun or through it's generated binar
 
 Shogun also supports function level flags, where a function using annotation can
 specify particular flags which it will access from the either the `Context` package
-if passed in, except for `CancelContext` which only functions for cancelation.
+if passed in, except for `Context` which only functions for cancelation.
 
 
 ### Using Context
@@ -277,7 +277,7 @@ Only the following packages are allowed for usage. If you need context, then it
 must always be the first argument.
 
 - context "context.Context"
-- github.com/influx6/fuax/context "context.CancelContext"
+- github.com/influx6/fuax/context "context.Context"
 
 When using `context.Context` package from the internal Go packages, only its ability to be used as
 a timeout will be set if the `-t` or `-timeout` flag has a value. Support of filling context with values

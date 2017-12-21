@@ -21,7 +21,7 @@ import (
 
 const (
 	defaultDesc        = "No description provided."
-	fauxContext        = "github.com/influx6/faux/context"
+	fauxContext        = "context"
 	googleContext      = "context"
 	flagAnnotationName = "flag"
 )
@@ -499,26 +499,6 @@ func getContextState(arg ast.ArgType) (internals.ContextType, internals.VarMeta)
 			imp.Import = googleContext
 			imp.ImportNick = arg.Import.Name
 			return internals.UseGoogleContext, imp
-		}
-
-		if arg.Import.Path == fauxContext {
-			imp.Import = fauxContext
-			imp.ImportNick = arg.Import.Name
-			return internals.UseFauxContext, imp
-		}
-
-	case "context.CancelableContext":
-		if arg.Import.Path == fauxContext {
-			imp.Import = fauxContext
-			imp.ImportNick = arg.Import.Name
-			return internals.UseFauxContext, imp
-		}
-
-	case "context.CancelContext":
-		if arg.Import.Path == fauxContext {
-			imp.Import = fauxContext
-			imp.ImportNick = arg.Import.Name
-			return internals.UseFauxContext, imp
 		}
 	}
 
